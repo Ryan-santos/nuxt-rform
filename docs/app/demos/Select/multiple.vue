@@ -4,8 +4,7 @@
         label="demo.select.variosIds"
         placeholder="demo.select.funcionarios"
         :options="users"
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
         multiple
     />
     <RSelect
@@ -14,8 +13,7 @@
         label="demo.select.variosObjetos"
         placeholder="demo.select.funcionarios"
         :options="users"
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
         multiple
         model-full
     >

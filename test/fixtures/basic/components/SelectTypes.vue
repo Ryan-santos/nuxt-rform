@@ -1,12 +1,11 @@
 <template>
     <div>
-        <!-- array de objetos: `value` é `item[keyValue]`, `original` é o item -->
+        <!-- array de objetos: `value` é `item[pick.value]`, `original` é o item -->
         <RSelect
             v-slot="{ selected }"
             name="porValor"
             :options="users"
-            key-value="id"
-            key-label="name"
+            :pick="{ value: 'id', label: 'name' }"
             :default="1"
             @update:model-value="takesNumber"
         >
@@ -19,7 +18,7 @@
         <RSelect
             name="porItem"
             :options="users"
-            key-value="id"
+            :pick="{ value: 'id' }"
             model-full
             :default="users[0]"
             @update:model-value="takesUser"
@@ -29,7 +28,7 @@
         <RSelect
             name="varios"
             :options="users"
-            key-value="id"
+            :pick="{ value: 'id' }"
             multiple
             :default="[1, 2]"
             @update:model-value="takesNumbers"
@@ -61,11 +60,41 @@
             v-slot="{ selected }"
             name="aninhado"
             :options="nested"
-            key-value="owner.id"
-            key-label="name"
+            :pick="{ value: 'owner.id', label: 'name' }"
             @update:model-value="takesUnknown"
         >
             {{ takesUnknown(selected.value) }}
+        </RSelect>
+
+        <!-- o `pick` inline preserva o literal, como o `key-value` de antes -->
+        <RSelect
+            v-slot="{ selected }"
+            name="pickInline"
+            :options="users"
+            :pick="{ value: 'role' }"
+            @update:model-value="takesString"
+        >
+            {{ takesString(selected.value) }}
+        </RSelect>
+
+        <!-- propriedade de objeto alarga, e aí a falha é alta: sem `as const` o
+             `KeyValue` cai no default `"id"` e o objeto não é atribuível -->
+        <!-- @vue-expect-error -->
+        <RSelect
+            name="pickSolto"
+            :options="users"
+            :pick="pickSolto"
+        />
+
+        <!-- com `as const` o literal sobrevive à variável -->
+        <RSelect
+            v-slot="{ selected }"
+            name="pickConst"
+            :options="users"
+            :pick="pickConst"
+            @update:model-value="takesNumber"
+        >
+            {{ takesNumber(selected.value) }}
         </RSelect>
 
         <!-- o valor não é mais `unknown`: uma chave de outro tipo não passa -->
@@ -73,7 +102,7 @@
         <RSelect
             name="tipoErrado"
             :options="users"
-            key-value="id"
+            :pick="{ value: 'id' }"
             @update:model-value="takesString"
         />
 
@@ -81,7 +110,7 @@
         <RSelect
             name="defaultErrado"
             :options="users"
-            key-value="id"
+            :pick="{ value: 'id' }"
             :default="'um'"
         />
 
@@ -90,7 +119,7 @@
         <RSelect
             name="listaSemMultiple"
             :options="users"
-            key-value="id"
+            :pick="{ value: 'id' }"
             :default="[1]"
         />
     </div>
@@ -107,6 +136,13 @@
     const users: User[] = [{ id: 1, name: "Ana", role: "Suporte" }];
 
     const nested = [{ name: "Ana", owner: { id: 1 } }];
+
+    // Propriedade de objeto alarga para `string`, e aí não há candidato de
+    // inferência: `KeyValue` cai no default `"id"` e o objeto deixa de ser
+    // atribuível. Falha alta, e é o mesmo que o `key-value` de antes já fazia com
+    // uma string alargada. O `as const` do vizinho é a saída.
+    const pickSolto = { value: "id", label: "name" };
+    const pickConst = { value: "id", label: "name" } as const;
 
     const takesNumber = (value: number) => value;
     const takesNumbers = (value: number[]) => value.length;

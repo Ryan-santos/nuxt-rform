@@ -110,7 +110,7 @@
 <script lang="ts">
     /**
      * Campo de seleção com dropdown e busca. As `options` podem ser array primitivo,
-     * array de objetos (`keyValue` / `keyLabel`) ou objeto `{ chave: rótulo }`;
+     * array de objetos (`pick: { value, label }`) ou objeto `{ chave: rótulo }`;
      * `multiple` e `modelFull` decidem o que chega ao model, e `search` liga o campo
      * de busca dentro do painel.
      *
@@ -161,12 +161,12 @@
      */
     type KeyOf<Opts> = keyof Opts extends string ? keyof Opts : string;
 
-    /** O `value` de uma opção: `item[keyValue]` no array, a chave no objeto. */
+    /** O `value` de uma opção: `item[pick.value]` no array, a chave no objeto. */
     export type ValueOf<Opts, KV extends string> = Opts extends readonly (infer U)[]
         ? PropOf<U, KV>
         : KeyOf<Opts>;
 
-    /** O `label` de uma opção: `item[keyLabel]`, ou o próprio item quando primitivo. */
+    /** O `label` de uma opção: `item[pick.label]`, ou o próprio item quando primitivo. */
     export type LabelOf<Opts, KL extends string> = Opts extends readonly (infer U)[]
         ? PropOf<U, KL>
         : Opts extends Record<string | number, infer V>
@@ -174,8 +174,8 @@
           : unknown;
 
     /**
-     * As chaves que `keyValue`/`keyLabel` sugerem, sem fechar o campo: o `string & {}`
-     * é o que mantém `keyValue="user.id"` válido, e sem ele o `getProperty` perderia
+     * As chaves que o `pick` sugere, sem fechar o campo: o `string & {}` é o que
+     * mantém `pick: { value: "user.id" }` válido, e sem ele o `getProperty` perderia
      * o caminho pontilhado que ele sabe resolver.
      */
     export type OptionKey<Opts> =
@@ -239,8 +239,9 @@
             }
         },
         default: null,
-        keyValue: "id",
-        keyLabel: "name",
+        // Uma prop só para dizer uma coisa só. O `merger` recursiona em objeto que
+        // não é array, então `:pick="{ value: 'codigo' }"` conserva o `label` daqui.
+        pick: { value: "id", label: "name" },
         search: false,
         text: {
             search: "search"
@@ -281,11 +282,15 @@
             options: Opts;
             // Escrito por extenso, e não num alias de dois parâmetros: com a
             // interseção atrás de um alias, o `Element` de todo campo estoura o
-            // "union type too complex". O `& string` é o remendo do `Multiple &
-            // boolean` — sem um membro que ele resolva, o compiler-sfc não emite
-            // `type: String`.
-            keyValue?: KeyValue & OptionKey<Opts> & string;
-            keyLabel?: KeyLabel & OptionKey<Opts> & string;
+            // "union type too complex".
+            //
+            // A inferência anda por propriedade, então `:pick="{ value: 'id' }"`
+            // escrito inline preserva o literal. Um `const` de objeto alarga para
+            // `string` e o valor volta a `unknown` — daí o `as const` na doc.
+            pick?: {
+                value?: KeyValue & OptionKey<Opts> & string;
+                label?: KeyLabel & OptionKey<Opts> & string;
+            };
             modelFull?: ModelFull & boolean;
             multiple?: Multiple & boolean;
             search?: boolean;
@@ -306,8 +311,7 @@
         Utils["Placeholder"] &
         TextProp<typeof defaults.text> & {
             options: Options;
-            keyValue?: string;
-            keyLabel?: string;
+            pick?: { value?: string; label?: string };
             modelFull?: boolean;
             multiple?: boolean;
             search?: boolean;
@@ -378,7 +382,7 @@
     };
 
     const _options = computed<Item[]>(() => {
-        const { options, keyValue, keyLabel } = props.value;
+        const { options, pick } = props.value;
 
         if (!options) {
             return [];
@@ -394,13 +398,17 @@
             }
 
             return options.map((entry) => {
-                return toItem(getProperty(entry, keyValue), getProperty(entry, keyLabel), entry);
+                return toItem(
+                    getProperty(entry, pick?.value),
+                    getProperty(entry, pick?.label),
+                    entry
+                );
             });
         }
 
         if (typeof options === "object") {
             return Object.entries(options).map(([key, value]) => {
-                const label = isRecord(value) ? getProperty(value, keyLabel) : value;
+                const label = isRecord(value) ? getProperty(value, pick?.label) : value;
 
                 return toItem(key, label, { [key]: value });
             });
@@ -451,7 +459,7 @@
 
         const current = model.value as unknown;
         const list: unknown[] = Array.isArray(current) ? [...current] : [];
-        const key = props.value.keyValue;
+        const key = props.value.pick?.value;
 
         const idx =
             props.value.modelFull && key
@@ -468,7 +476,7 @@
     };
 
     const matchesModel = (value: unknown): boolean => {
-        const key = props.value.keyValue;
+        const key = props.value.pick?.value;
         const current = model.value as unknown;
 
         if (props.value.multiple && Array.isArray(current)) {

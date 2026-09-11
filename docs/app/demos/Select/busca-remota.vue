@@ -5,8 +5,7 @@
         placeholder="demo.common.selecione"
         :options
         :loading
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
         @search="buscar"
     />
 </template>

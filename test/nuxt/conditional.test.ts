@@ -342,22 +342,21 @@ describe("snake_case no schema", () => {
         }
     });
 
-    it("`key_value` e `key_label` num RSelect funcionam de graça", async () => {
+    it("`model_full` num RSelect funciona de graça", async () => {
         const { wrapper } = await schema({
             uf: {
                 type: "select",
-                default: 2,
+                default: { id: 2, name: "Bahia" },
                 options: [
-                    { codigo: 1, nome: "Acre" },
-                    { codigo: 2, nome: "Bahia" }
+                    { id: 1, name: "Acre" },
+                    { id: 2, name: "Bahia" }
                 ],
-                key_value: "codigo",
-                key_label: "nome"
+                model_full: true
             }
         } as unknown as Schema);
 
         expect(wrapper.text()).toContain("Bahia");
-        expect(wrapper.html()).not.toContain("key_value");
+        expect(wrapper.html()).not.toContain("model_full");
     });
 
     it("uma chave inventada segue intacta como atributo de fallthrough", async () => {

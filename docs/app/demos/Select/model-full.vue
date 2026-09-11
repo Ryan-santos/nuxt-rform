@@ -4,8 +4,7 @@
         label="demo.select.semModelFull"
         placeholder="demo.common.selecione"
         :options="users"
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
     />
     <RSelect
         v-slot="{ selected }"
@@ -13,8 +12,7 @@
         label="demo.select.comModelFull"
         placeholder="demo.common.selecione"
         :options="users"
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
         model-full
     >
         <img

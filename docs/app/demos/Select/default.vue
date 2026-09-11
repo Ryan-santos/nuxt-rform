@@ -5,8 +5,7 @@
         label="demo.select.jaVemEscolhido"
         :options="users"
         :default="users[1]"
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
         model-full
     >
         <img

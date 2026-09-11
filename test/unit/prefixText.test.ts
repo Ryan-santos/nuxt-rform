@@ -73,10 +73,10 @@ describe("prefixText", () => {
         });
     });
 
-    it("não toca numa string que mora fora de text", () => {
+    it("não toca numa string fora de text, nem num `label` aninhado", () => {
         expect(
-            prefixText({ ui: {}, keyValue: "id", keyLabel: "name" }, "Select", "fields")
-        ).toEqual({ ui: {}, keyValue: "id", keyLabel: "name" });
+            prefixText({ ui: {}, pick: { value: "id", label: "name" } }, "Select", "fields")
+        ).toEqual({ ui: {}, pick: { value: "id", label: "name" } });
     });
 
     it("repassa sem mudar um objeto que não tem text", () => {

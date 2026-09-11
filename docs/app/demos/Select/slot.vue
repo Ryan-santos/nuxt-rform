@@ -5,8 +5,7 @@
         label="demo.select.funcionario"
         placeholder="demo.common.selecione"
         :options="users"
-        key-value="id"
-        key-label="name"
+        :pick="{ value: 'id', label: 'name' }"
         model-full
     >
         <img

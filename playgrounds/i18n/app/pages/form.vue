@@ -150,8 +150,7 @@
                     label="~~single + modelFull, com slot"
                     placeholder="form.selecione"
                     :options="users"
-                    key-value="id"
-                    key-label="name"
+                    :pick="{ value: 'id', label: 'name' }"
                     model-full
                 >
                     <img
@@ -173,8 +172,7 @@
                     label="~~multiple + modelFull"
                     placeholder="form.selecione"
                     :options="users"
-                    key-value="id"
-                    key-label="name"
+                    :pick="{ value: 'id', label: 'name' }"
                     multiple
                     model-full
                 >

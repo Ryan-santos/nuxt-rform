@@ -278,7 +278,7 @@ Não é inconsistência: `op: "is_empty"` é um *valor*, e ali snake_case é a c
 da casa; já a chave espelha o nome de prop que o resto do módulo usa.
 
 **No schema, snake_case é aceito para qualquer chave composta** — `visible_when`,
-`disabled_when`, e de graça `key_value`, `key_label`, `model_full`. Não é uma tabela
+`disabled_when`, e de graça `model_full`, `on_search`. Não é uma tabela
 de apelidos: é uma regra, com duas metades.
 
 **Runtime**, no `rest` do `Dynamic.vue`. As duas condicionais são resolvidas antes,
@@ -731,11 +731,11 @@ export const defaults = defineDefaults({
         button: "add",                  // ← chave de tradução DO MÓDULO
         bytes: { kb: "kb" }              // ← grupo: a própria chave entra no caminho
     },
-    keyValue: "id"                       // nome de propriedade — NÃO é texto
+    pick: { value: "id" }                // nome de propriedade — NÃO é texto
 });
 ```
 
-`Base` reserva `ui`, `default`, `text` e as duas que moram fora dele por contrato — `label` e `placeholder`, adiante. `text` é `TextSource` (`src/runtime/type.d.ts`): um objeto aninhado, `{ [key]: string | TextSource }`, e continua aninhado o caminho inteiro — nada é achatado para o topo. Um template lê `tr(props.text?.button)`, nunca uma prop de nível superior tipo `buttonText`. Sem esse marcador a regra "prefixa toda string do `defaults`" transformaria `Select.keyValue: "id"` em `"rform.fields.select.id"`, e o Select passaria a procurar `option["rform.fields.select.id"]` — quebra calada em três lugares hoje (`Select.keyValue`, `Select.keyLabel`, `Pin.type`) e armadilha permanente para campo de usuário.
+`Base` reserva `ui`, `default`, `text` e as duas que moram fora dele por contrato — `label` e `placeholder`, adiante. `text` é `TextSource` (`src/runtime/type.d.ts`): um objeto aninhado, `{ [key]: string | TextSource }`, e continua aninhado o caminho inteiro — nada é achatado para o topo. Um template lê `tr(props.text?.button)`, nunca uma prop de nível superior tipo `buttonText`. Sem esse marcador a regra "prefixa toda string do `defaults`" transformaria `Select.pick.value: "id"` em `"rform.fields.select.id"`, e o Select passaria a procurar `option["rform.fields.select.id"]` — quebra calada em dois lugares hoje (`Select.pick`, `Pin.type`) e armadilha permanente para campo de usuário. Note que o `label` **aninhado** dentro do `pick` também escapa: o `prefixText` só prefixa `text` e as duas chaves de topo `label`/`placeholder`, e `pick.label` não é chave de topo.
 
 Quem prefixa é `prefixText` (`utils/prefixText.ts`, puro), chamado por `useField` (com `scope: "fields"`) e por `useUtil` (com `scope: "utils"`) sobre o `defaults` do componente, **antes** do `merger`:
 
@@ -1305,8 +1305,8 @@ A derivação é uma cadeia de aliases pequenos, cada um com um trabalho só:
 | `SelectedOf` / `ModelOf` | a seleção, e ela embrulhada em lista pelo `multiple` |
 
 **`PropOf` cai em `unknown` de propósito.** O `getProperty` faz `path.split(".")`, então
-`keyValue="user.id"` é caminho aninhado e **não** é `keyof` de nada — fechar as duas
-props em `keyof` quebraria esse uso. Elas continuam aceitando qualquer string, e o
+`:pick="{ value: 'user.id' }"` é caminho aninhado e **não** é `keyof` de nada — fechar as
+duas chaves em `keyof` quebraria esse uso. Elas continuam aceitando qualquer string, e o
 valor só estreita quando a chave é simples; no caminho pontilhado ele volta a ser
 `unknown`, que é o que **todos** os casos eram antes.
 
@@ -1317,12 +1317,14 @@ mentira. Não há `[keyof Opts] extends [string]` aqui: `keyof Opts` não é par
 tipo pelado, então não distribui, e o par de colchetes seria decoração (medido, as duas
 formas dão o mesmo nos três casos).
 
-**O `& string` em `keyValue`/`keyLabel` é o mesmo remendo do `Multiple & boolean`.**
+**O `& string` em `pick.value`/`pick.label` é o mesmo remendo do `Multiple & boolean`.**
 `OptionKey<Opts>` é conditional, e o `inferRuntimeType` do compiler-sfc devolve
 `UNKNOWN` para conditional; numa interseção ele filtra o que não resolveu, então basta
 **um** membro resolvível para o `type: String` voltar. Medido, comparando os props
-compilados antes e depois: sem o `& string`, `keyValue` e `keyLabel` perdem o `type` —
-compila, roda, e some a validação de prop do dev mode, calado.
+compilados antes e depois: sem o `& string`, as duas chaves perdem o `type` — compila,
+roda, e some a validação de prop do dev mode, calado. Com o `pick`, quem precisa de
+`type: Object` é a prop de topo, e um `TSTypeLiteral` o compiler resolve sozinho; o
+`& string` de dentro passou a servir só à inferência.
 
 **E a interseção fica escrita por extenso na prop, nunca atrás de um alias de dois
 parâmetros.** Um `OptionKey<Opts, K> = K & string & (…)` é a forma legível, e foi
@@ -1331,15 +1333,58 @@ medida: ela estoura `TS2590 "union type too complex"` em `Date`, `Hour`, `Number
 `Element` que o `schema.d.ts` instancia. O custo da forma por extenso é uma tabela de
 props do site mostrando `KeyValue & OptionKey<Opts> & string` em vez de `string`.
 
+#### `pick` é uma prop só, e a inferência anda por propriedade
+
+`keyValue`/`keyLabel` viraram `pick: { value, label }` — duas props de topo para
+dizer uma coisa só, com o prefixo repetido em cada nome. Os parâmetros de tipo
+`KeyValue`/`KeyLabel` **ficaram**, com os mesmos defaults `"id"`/`"name"`:
+`ValueOf`, `LabelOf`, `SelectedOf` e `ModelOf` não mudaram uma linha.
+
+O `merger` recursiona em objeto que não é array, então `:pick="{ value: 'codigo' }"`
+conserva o `label: "name"` do default. A semântica de "sobrescrevo uma das duas"
+sai de graça.
+
+**O `prefixText` não alcança o `label` de dentro**, e isso é o que o teste passou a
+provar: ele só prefixa `defaults.text` e as duas chaves de **topo**
+`label`/`placeholder`, e `pick.label` não é chave de topo.
+
+**Descer um nível não muda a inferência do literal**, e isso foi medido: o tipo
+contextual de `'id'` continua sendo a mesma interseção, então `:pick="{ value: 'id' }"`
+escrito **inline** infere `KeyValue = "id"` exatamente como o `key-value="id"` de antes.
+
+O que muda é a vizinhança, e ela falha **alto**, não calada:
+
+```ts
+const chave = "id";                          // "id"     → infere, como sempre
+const cfg = { value: "id", label: "name" };  // { value: string } → NÃO compila
+const cfg = { value: "id" } as const;        // "id"     → infere
+```
+
+Propriedade de objeto alarga para `string`, e aí não há candidato de inferência:
+`KeyValue` cai no **default** `"id"` e o objeto deixa de ser atribuível. A mensagem
+reclama de `"id"` — o default, não a chave que o autor escreveu —, e é confusa; a
+saída é `as const`, e está escrita nas duas páginas do Select.
+
+**Não é regressão.** Medido nas duas assinaturas: uma string já alargada em
+`key-value` errava do mesmo jeito e pelo mesmo motivo. O que `pick` acrescenta é o
+caso do objeto inteiro alargado, que erra igual.
+
+**O snake_case do schema sai de graça**: `pick` tem uma palavra só, então nem o
+`rest` do `Dynamic.vue` nem o `SnakeAliases` do `Base<P, C>` têm o que fazer — e as
+duas chaves de dentro não são chave de topo do `rest`, então a regra geral nunca as
+vê. O exemplo do teste que **documenta** a regra trocou para `model_full`, que
+continua sendo prop composta e real do mesmo campo.
+
 O runtime é dinâmico e o tipo é o contrato, então há **um** ponto de cast, e é o
 `toItem(value, label, original)` que monta cada opção. Fora dele o `_options` não
 casteia nada.
 
 A guarda é `test/fixtures/basic/components/SelectTypes.vue` — o `vue-tsc` da fixture é
 quem a executa, do lugar de quem consome. Ela cobre os cinco formatos pelo lado
-positivo (passando `selected.value` e o payload do evento a funções tipadas) e três
-casos pelo negativo, com `<!-- @vue-expect-error -->`. Vale conferir que ela morde:
-contra o `Select.vue` anterior são dez erros e duas diretivas ociosas.
+positivo (passando `selected.value` e o payload do evento a funções tipadas) e quatro
+casos pelo negativo, com `<!-- @vue-expect-error -->` — o quarto é o `pick` numa
+variável sem `as const`. Vale conferir que ela morde: contra o `Select.vue` anterior
+são dez erros e duas diretivas ociosas.
 
 #### A busca é opt-in, e o ref teve de mudar de nome
 
