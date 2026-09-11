@@ -50,5 +50,10 @@
         "descartar": "descartar alterações",
         "sujo": "dirty",
         "limpo": "limpo"
+    },
+    "usuarios": {
+        "responsavel": "Responsável",
+        "autor": "Autor",
+        "revisores": "Revisores"
     }
 }

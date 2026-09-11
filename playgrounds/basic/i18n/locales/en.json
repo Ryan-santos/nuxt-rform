@@ -50,5 +50,10 @@
         "descartar": "discard changes",
         "sujo": "dirty",
         "limpo": "clean"
+    },
+    "usuarios": {
+        "responsavel": "Owner",
+        "autor": "Author",
+        "revisores": "Reviewers"
     }
 }

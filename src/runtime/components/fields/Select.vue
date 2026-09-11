@@ -675,7 +675,13 @@
 
         // Semeia **antes** de escrever no model: é o que faz o rótulo sobreviver a
         // digitar na busca, paginar e reabrir o painel.
-        remote.remember(option);
+        //
+        // Só em modo remoto, e a guarda não é higiene: em estático o cache
+        // responderia por um valor que saiu do `options`, onde hoje o campo cai no
+        // placeholder. Seria mudança semântica calada no caminho que todo mundo usa.
+        if (remoteMode.value) {
+            remote.remember(option);
+        }
 
         if (!props.value.multiple) {
             model.value = stored;
