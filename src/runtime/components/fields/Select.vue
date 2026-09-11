@@ -84,6 +84,34 @@
                 </div>
                 <div :class="props.ui?.list?.container">
                     <div
+                        v-if="pinnedRows.length > 0"
+                        role="group"
+                        :class="props.ui?.list?.pinned"
+                    >
+                        <div
+                            v-for="(option, key) in pinnedRows"
+                            :key
+                            role="option"
+                            aria-selected="true"
+                            :class="[
+                                props.ui?.list?.option?.container,
+                                key === 0 ? props.ui?.list?.option?.first : undefined,
+                                props.ui?.list?.option?.selected
+                            ]"
+                            @click="select(option)"
+                        >
+                            <slot
+                                :selected="rowSlot(option)"
+                                :list="true"
+                            >
+                                <p :class="props.ui?.list?.option?.text">
+                                    {{ option.label }}
+                                </p>
+                            </slot>
+                        </div>
+                    </div>
+
+                    <div
                         v-if="status === 'loading'"
                         :class="props.ui?.list?.state"
                     >
@@ -144,6 +172,12 @@
                                 </p>
                             </slot>
                         </div>
+
+                        <div
+                            ref="sentinel"
+                            aria-hidden="true"
+                            :class="props.ui?.list?.sentinel"
+                        />
                     </div>
 
                     <slot
@@ -318,7 +352,11 @@
                     `
                 },
                 container: "flex min-h-0 flex-1 flex-col",
+                // A segunda caixa rolável: com `multiple` e dez seleções ela para de
+                // crescer e rola por dentro, em vez de espremer a lista de baixo.
+                pinned: "max-h-40 shrink-0 overflow-auto overscroll-contain",
                 scroller: "min-h-0 flex-1 overflow-auto overscroll-contain",
+                sentinel: "h-px w-full",
                 option: {
                     container: `
                         flex w-full cursor-pointer flex-row items-center gap-1 border-t
@@ -675,6 +713,34 @@
         return found.at(0);
     });
 
+    /**
+     * A quarta fonte do cache: a opção que está na página **e** no model. Sem ela um
+     * form carregado do servidor (model já preenchido, ninguém clicou, sem
+     * `resolve`) perderia o rótulo no instante em que a busca troca a página — que é
+     * exatamente a falha que o cache existe para consertar.
+     *
+     * Continua limitado ao número de seleções, e não à lista: só o que o model
+     * aponta entra.
+     */
+    watch(
+        [_options, modelValues],
+        ([options, values]) => {
+            if (!remoteMode.value || props.value.modelFull) {
+                return;
+            }
+
+            for (const entry of values) {
+                const value = valueOfEntry(entry);
+                const found = options.find((item) => item.value === value);
+
+                if (found) {
+                    remote.remember(found);
+                }
+            }
+        },
+        { immediate: true }
+    );
+
     const hasSelection = computed(() => {
         if (Array.isArray(selected.value)) {
             return selected.value.length > 0;
@@ -704,9 +770,44 @@
     const dropdownMiddleware = [dropdownFit()];
 
     const scroller = useTemplateRef<HTMLElement>("scroller");
+    const sentinel = useTemplateRef<HTMLElement>("sentinel");
 
-    /** As linhas do painel. Em modo estático é a lista inteira, filtrada ou não. */
-    const rows = computed<Item[]>(() => filteredOptions.value);
+    /**
+     * A seção do selecionado, acima do scroller. **Só em modo remoto**: com
+     * `options` estática o escolhido já está na lista e sempre esteve, e subi-lo
+     * reordenaria a lista de todo mundo, calado.
+     *
+     * Não guarda estado — é o mesmo `selected` que o cache já computa —, então a
+     * ordem é a do model e um item removido sai daqui sozinho.
+     */
+    const pinnedRows = computed<Item[]>(() => {
+        if (!remoteMode.value) {
+            return [];
+        }
+
+        const current = selected.value;
+
+        if (Array.isArray(current)) {
+            return current;
+        }
+
+        return current ? [current] : [];
+    });
+
+    const pinnedKeys = computed(() => new Set(pinnedRows.value.map((item) => keyOf(item.value))));
+
+    /**
+     * As linhas do painel. Em modo estático é a lista inteira, filtrada ou não; em
+     * remoto, o que a seção de cima já mostra sai daqui — senão o item que está na
+     * página corrente **e** selecionado apareceria duas vezes.
+     */
+    const rows = computed<Item[]>(() => {
+        if (pinnedRows.value.length === 0) {
+            return filteredOptions.value;
+        }
+
+        return filteredOptions.value.filter((item) => !pinnedKeys.value.has(keyOf(item.value)));
+    });
 
     const status = computed(() => remote.status.value);
 
@@ -783,8 +884,50 @@
         }
     });
 
+    let observer: IntersectionObserver | undefined;
+
+    const disconnect = () => {
+        observer?.disconnect();
+        observer = undefined;
+    };
+
+    /**
+     * A próxima página por interseção, e não por listener de scroll: o observer não
+     * refaz layout a cada quadro para responder a mesma pergunta.
+     *
+     * O `root` é o scroller, e é o que torna a coluna flex requisito e não gosto —
+     * o painel mora em `#teleports`, `position: fixed`, então com `root: null` o
+     * observer mede contra a viewport do documento e um painel cheio de itens nunca
+     * reporta interseção.
+     *
+     * A sentinela só existe depois que a primeira página assentou, então armar pela
+     * ref dela é o que garante que a página 1 nunca dependa do observer.
+     */
+    watch([sentinel, scroller], ([mark, root]) => {
+        disconnect();
+
+        // Sem `IntersectionObserver` (SSR, happy-dom) não há paginação por scroll —
+        // a página 1 continua carregando pelo caminho direto. Mesma disciplina do
+        // `isFile` com `typeof File !== "undefined"`.
+        if (!mark || !root || typeof IntersectionObserver === "undefined") {
+            return;
+        }
+
+        observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    remote.next();
+                }
+            },
+            { root, rootMargin: "200px 0px" }
+        );
+
+        observer.observe(mark);
+    });
+
     onUnmounted(() => {
         clearTimeout(timer);
+        disconnect();
         remote.stop();
     });
 </script>

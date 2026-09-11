@@ -33,8 +33,15 @@ const pick = { value: "id", label: "name" };
 /** O que o campo entrega à fn — só o que estes casos leem. */
 type Ctx = { search: string; page: number };
 
-const rows = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
-    wrapper.findAll('[role="option"]').map((row) => row.text());
+type Finder = { findAll: (s: string) => { text: () => string }[] };
+
+/** As linhas da lista de baixo — o scroller. */
+const rows = (wrapper: Finder) =>
+    wrapper.findAll('[role="listbox"] [role="option"]').map((row) => row.text());
+
+/** As linhas fixas do selecionado, na seção acima do scroller. */
+const pinned = (wrapper: Finder) =>
+    wrapper.findAll('[role="group"] [role="option"]').map((row) => row.text());
 
 /**
  * `options` como função: quem busca e pagina é o app, e o módulo é dono do ciclo
@@ -147,7 +154,7 @@ describe("RSelect com options em função", () => {
         await open(wrapper);
         await settle(wrapper);
 
-        await wrapper.findAll('[role="option"]')[0]!.trigger("click");
+        await wrapper.findAll('[role="listbox"] [role="option"]')[0]!.trigger("click");
         await settle(wrapper);
 
         await wrapper.find("input[type=search]").setValue("outro");
@@ -166,7 +173,7 @@ describe("RSelect com options em função", () => {
         await open(wrapper);
         await settle(wrapper);
 
-        expect(wrapper.findAll('[role="option"]')).toHaveLength(0);
+        expect(rows(wrapper)).toHaveLength(0);
         expect(wrapper.text()).toContain("Nada encontrado");
     });
 
@@ -329,9 +336,155 @@ describe("a prop resolve do RSelect", () => {
         await open(wrapper);
         await settle(wrapper);
 
-        await wrapper.findAll('[role="option"]')[0]!.trigger("click");
+        await wrapper.findAll('[role="listbox"] [role="option"]')[0]!.trigger("click");
         await settle(wrapper);
 
         expect(resolve).not.toHaveBeenCalled();
+    });
+});
+/**
+ * A seção do selecionado sobe para fora do scroller: ela existe para o escolhido
+ * não sumir **enquanto se pagina**, e no topo do scroller ela sumiria na primeira
+ * rolada — que é exatamente quando ela serve.
+ */
+describe("a seção do selecionado do RSelect", () => {
+    it("existe em modo remoto e não em estático", async () => {
+        const remoto = await mountSuspended(RSelect, {
+            props: { options: () => users, modelValue: 1, pick } as never
+        });
+
+        await open(remoto);
+        await settle(remoto);
+
+        expect(pinned(remoto)).toEqual(["Ana"]);
+
+        const estatico = await mountSuspended(RSelect, {
+            props: { options: users, modelValue: 1, pick } as never
+        });
+
+        await open(estatico);
+        await settle(estatico);
+
+        // Em estático o escolhido já está na lista e sempre esteve; subi-lo
+        // reordenaria a lista de todo mundo, calado.
+        expect(pinned(estatico)).toEqual([]);
+        expect(rows(estatico)).toEqual(["Ana", "Bruno"]);
+    });
+
+    it("o item selecionado que está na página corrente aparece uma vez só", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => users, modelValue: 1, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(pinned(wrapper)).toEqual(["Ana"]);
+        expect(rows(wrapper)).toEqual(["Bruno"]);
+    });
+
+    it("um termo que não casa o rótulo não tira o escolhido da seção", async () => {
+        const options = vi.fn(({ search }: Ctx) => (search ? [{ id: 9, name: "Outro" }] : users));
+
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options, search: true, debounce: 0, modelValue: 1, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        await wrapper.find("input[type=search]").setValue("zzz");
+        await settle(wrapper);
+
+        expect(pinned(wrapper)).toEqual(["Ana"]);
+        expect(rows(wrapper)).toEqual(["Outro"]);
+    });
+
+    it("clicar na linha fixa desmarca em multiple, e ela sai", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => users, multiple: true, modelValue: [1], pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(pinned(wrapper)).toEqual(["Ana"]);
+
+        await wrapper.findAll('[role="group"] [role="option"]')[0]!.trigger("click");
+        await settle(wrapper);
+
+        const emitted = wrapper.emitted("update:modelValue");
+
+        expect(emitted?.at(-1)?.[0]).toEqual([]);
+    });
+
+    it("o empty renderiza abaixo da seção, nunca no lugar dela", async () => {
+        const options = vi.fn(({ search }: Ctx) => (search ? [] : users));
+
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options, search: true, debounce: 0, modelValue: 1, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        await wrapper.find("input[type=search]").setValue("zzz");
+        await settle(wrapper);
+
+        expect(pinned(wrapper)).toEqual(["Ana"]);
+        expect(wrapper.text()).toContain("Nada encontrado");
+    });
+
+    it("a seção tem uma max-h própria — duas caixas roláveis não se espremem", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => users, modelValue: 1, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        const classes = wrapper.get('[role="group"]').classes();
+
+        expect(classes).toContain("max-h-40");
+        expect(classes).toContain("overflow-auto");
+        expect(classes).toContain("shrink-0");
+    });
+});
+
+/**
+ * A quarta fonte do cache: a opção que está na página **e** no model. É o caso do
+ * form carregado do servidor em que ninguém clicou e não há `resolve`.
+ */
+describe("o cache de rótulos do RSelect sem resolve", () => {
+    it("aprende o rótulo do que já está no model, e ele sobrevive à troca de página", async () => {
+        const options = vi.fn(({ search }: Ctx) => (search ? [{ id: 9, name: "Outro" }] : users));
+
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options, search: true, debounce: 0, modelValue: 1, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        // Antes de trocar de página o rótulo sai da própria lista.
+        expect(wrapper.get(".RSelect").text()).toContain("Ana");
+
+        await wrapper.find("input[type=search]").setValue("zzz");
+        await settle(wrapper);
+
+        // A Ana já não está na lista, e o rótulo continua.
+        expect(rows(wrapper)).toEqual(["Outro"]);
+        expect(wrapper.get(".RSelect").text()).toContain("Ana");
+    });
+
+    it("sem nada que o responda, o valor cru aparece em vez de um vazio", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => [{ id: 2, name: "Bruno" }], modelValue: 77, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(wrapper.get(".RSelect").text()).toContain("77");
     });
 });
