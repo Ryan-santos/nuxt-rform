@@ -26,6 +26,9 @@
 
     // Marque mais alguns, busque por outro nome e role: o que está no model fica
     // no topo, e uma linha nunca muda de lugar enquanto o painel está aberto.
+    //
+    // `{ items, total }` em vez do array: o total vai ao rodapé, e a paginação
+    // para quando a lista o alcança.
     const buscar = ({ search, page }: { search: string; page: number }) => {
         const query = search.trim().toLowerCase();
 
@@ -33,6 +36,6 @@
             ? acervo.filter(({ name }) => name.toLowerCase().includes(query))
             : acervo;
 
-        return casados.slice((page - 1) * PAGE, page * PAGE);
+        return { items: casados.slice((page - 1) * PAGE, page * PAGE), total: casados.length };
     };
 </script>

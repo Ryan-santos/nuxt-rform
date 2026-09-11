@@ -115,6 +115,55 @@ describe("useRemoteOptions", () => {
         expect(fn).toHaveBeenCalledTimes(2);
     });
 
+    it("aceita o envelope { items, total }, e o total fica exposto", async () => {
+        const fn = vi.fn(({ page }) => ({ items: pageOf(page), total: 7 })) as unknown as OptionsFn;
+        const { remote } = build({ fn: () => fn });
+
+        remote.first();
+        await settle();
+
+        expect(remote.items.value.map((i) => i.value)).toEqual([1, 2]);
+        expect(remote.total.value).toBe(7);
+        expect(remote.exhausted.value).toBe(false);
+    });
+
+    it("total alcançado encerra sem a requisição vazia do fim", async () => {
+        const fn = vi.fn(({ page }) => ({ items: pageOf(page), total: 4 })) as unknown as OptionsFn;
+        const { remote } = build({ fn: () => fn });
+
+        remote.first();
+        await settle();
+        remote.next();
+        await settle();
+
+        expect(remote.items.value).toHaveLength(4);
+        expect(remote.exhausted.value).toBe(true);
+        expect(remote.status.value).toBe("done");
+
+        remote.next();
+        await settle();
+
+        expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("`reset()` esquece o total da busca anterior", async () => {
+        const fn = vi.fn(({ search }: { search: string }) =>
+            search ? pageOf(1) : { items: pageOf(1), total: 9 }
+        ) as unknown as OptionsFn;
+        const { remote, setSearch } = build({ fn: () => fn });
+
+        remote.first();
+        await settle();
+
+        expect(remote.total.value).toBe(9);
+
+        setSearch("x");
+        remote.reset();
+        await settle();
+
+        expect(remote.total.value).toBeUndefined();
+    });
+
     it("não reentra enquanto a página está em voo", async () => {
         const fn = vi.fn(
             ({ page }) => new Promise((r) => setTimeout(() => r(pageOf(page)), 5))

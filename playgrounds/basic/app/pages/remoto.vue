@@ -65,7 +65,7 @@
 <script setup lang="ts">
     import { ref } from "vue";
 
-    import type { OptionsContext, ResolveContext } from "#rform/types";
+    import type { OptionsContext, OptionsPage, ResolveContext } from "#rform/types";
 
     type Usuario = {
         id: number;
@@ -73,10 +73,10 @@
         email: string;
     };
 
-    // `page` é 1-based e a rota devolve array vazio no fim; o ciclo — debounce,
+    // `page` é 1-based e a rota devolve `{ items, total }`; o ciclo — debounce,
     // página, cancelamento pelo `signal` — é do campo, não daqui.
     const buscar = ({ search, page, signal }: OptionsContext) =>
-        $fetch<Usuario[]>("/api/usuarios", { query: { search, page }, signal });
+        $fetch<OptionsPage<Usuario[]>>("/api/usuarios", { query: { search, page }, signal });
 
     // A rota devolve um item só, e o `resolve` espera `Options`: daí a lista de um.
     const traduzir = ({ value, signal }: ResolveContext) =>

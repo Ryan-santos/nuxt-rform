@@ -97,6 +97,30 @@
             {{ takesNumber(selected.value) }}
         </RSelect>
 
+        <!-- `options` em função: o generic sai da posição de retorno -->
+        <RSelect
+            v-slot="{ selected }"
+            name="remoto"
+            :options="buscar"
+            :pick="{ value: 'id', label: 'name' }"
+            @update:model-value="takesNumber"
+        >
+            {{ takesNumber(selected.value) }}
+            {{ takesUser(selected.original) }}
+        </RSelect>
+
+        <!-- …e do `items` do envelope, quando a API manda o total -->
+        <RSelect
+            v-slot="{ selected }"
+            name="remotoComTotal"
+            :options="buscarComTotal"
+            :pick="{ value: 'id', label: 'name' }"
+            @update:model-value="takesNumber"
+        >
+            {{ takesNumber(selected.value) }}
+            {{ takesUser(selected.original) }}
+        </RSelect>
+
         <!-- o valor não é mais `unknown`: uma chave de outro tipo não passa -->
         <!-- @vue-expect-error -->
         <RSelect
@@ -143,6 +167,9 @@
     // uma string alargada. O `as const` do vizinho é a saída.
     const pickSolto = { value: "id", label: "name" };
     const pickConst = { value: "id", label: "name" } as const;
+
+    const buscar = async () => users;
+    const buscarComTotal = async () => ({ items: users, total: users.length });
 
     const takesNumber = (value: number) => value;
     const takesNumbers = (value: number[]) => value.length;

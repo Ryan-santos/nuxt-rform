@@ -6,7 +6,9 @@ const PAGE = 20;
 
 /**
  * O outro lado de `options` como função: `?search=` e `?page=` (1-based), 20 por
- * página, e array vazio quando a página passa do fim — é o que encerra a paginação.
+ * página, no envelope `{ items, total }` — o `total` vai ao rodapé do campo e
+ * encerra a paginação quando a lista o alcança. Sem ele, seria o array vazio do
+ * fim que encerraria.
  */
 export default defineEventHandler(async (event) => {
     const query = getQuery(event);
@@ -26,5 +28,5 @@ export default defineEventHandler(async (event) => {
     // debounce segurando a tecla seguinte.
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    return casados.slice((page - 1) * PAGE, page * PAGE);
+    return { items: casados.slice((page - 1) * PAGE, page * PAGE), total: casados.length };
 });

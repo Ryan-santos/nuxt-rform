@@ -1,6 +1,6 @@
 import { ref, shallowRef, type Ref } from "vue";
 
-import type { OptionItem, Options, OptionsFn, ResolveFn } from "#rform/types";
+import type { OptionItem, Options, OptionsFn, OptionsPage, ResolveFn } from "#rform/types";
 import { keyOf, normalizeOptions, type Pick } from "#rform/utils";
 
 /**
@@ -18,6 +18,8 @@ export type RemoteOptions = {
     exhausted: Ref<boolean>;
     /** A última página que assentou; `0` antes da primeira. É o que arma a sentinela. */
     page: Ref<number>;
+    /** O `total` que a fn mandou no envelope, quando mandou. */
+    total: Ref<number | undefined>;
     /** O rótulo do que foi escolhido ou resolvido — nunca a lista. */
     pinned: Ref<Map<string, OptionItem>>;
     /** Semeia o cache antes de o valor ir ao model. */
@@ -46,6 +48,29 @@ export type Config = {
     fallback: () => string;
 };
 
+/**
+ * Separa o envelope `{ items, total }` do array puro. Um `OptObj` legítimo não tem
+ * uma chave `items` guardando uma lista, então a chave é o discriminador.
+ */
+const unwrap = (result: unknown): { items: Options; total?: number } => {
+    if (
+        result !== null &&
+        typeof result === "object" &&
+        !Array.isArray(result) &&
+        "items" in result &&
+        typeof (result as OptionsPage).items === "object"
+    ) {
+        const page = result as OptionsPage;
+
+        return {
+            items: page.items,
+            total: typeof page.total === "number" ? page.total : undefined
+        };
+    }
+
+    return { items: result as Options };
+};
+
 /** A mensagem que o app pôs no erro, ou vazio — nunca um `[object Object]`. */
 const errorMessage = (error: unknown): string => {
     if (error instanceof Error) {
@@ -69,6 +94,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
     const status = ref<ListStatus>("idle");
     const message = ref("");
     const exhausted = ref(false);
+    const total = ref<number | undefined>(undefined);
 
     // shallowRef e troca do Map inteiro: a leitura é por chave, e o que muda é a
     // entrada — não o interior de um item.
@@ -138,7 +164,14 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
                 return;
             }
 
-            const fresh = normalizeOptions(result as Options, config.pick());
+            const envelope = unwrap(result);
+            const fresh = normalizeOptions(envelope.items, config.pick());
+
+            // O último envelope manda: a fn pode só saber o total na página 1, ou
+            // corrigi-lo a cada resposta.
+            if (envelope.total !== undefined) {
+                total.value = envelope.total;
+            }
 
             // (b) array vazio encerra — é o contrato.
             if (fresh.length === 0) {
@@ -158,6 +191,15 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
             // contra a fn que ignora `page` e devolve sempre o mesmo. Sem ela o
             // sintoma é o navegador travando.
             if (more && added.length === 0) {
+                exhausted.value = true;
+                status.value = "done";
+
+                return;
+            }
+
+            // (e) total conhecido e alcançado encerra — é o que poupa a requisição
+            // vazia do fim para quem devolveu `{ items, total }`.
+            if (total.value !== undefined && items.value.length >= total.value) {
                 exhausted.value = true;
                 status.value = "done";
 
@@ -208,6 +250,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
         ++token;
         page.value = 0;
         items.value = [];
+        total.value = undefined;
         exhausted.value = false;
         message.value = "";
         status.value = "idle";
@@ -248,7 +291,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
                 .then((result) => {
                     const next = new Map(pinned.value);
 
-                    for (const item of normalizeOptions(result as Options, config.pick())) {
+                    for (const item of normalizeOptions(unwrap(result).items, config.pick())) {
                         next.set(keyOf(item.value), item);
                     }
 
@@ -273,6 +316,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
         message,
         exhausted,
         page,
+        total,
         pinned,
         remember,
         first,

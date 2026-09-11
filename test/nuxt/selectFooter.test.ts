@@ -142,6 +142,20 @@ describe("o rodapé do RSelect", () => {
 
         expect(wrapper.text()).toContain("3 itens");
     });
+
+    it("…ou o que a API mandou no envelope { items, total }", async () => {
+        const options = vi.fn(() => ({ items: users, total: 480 }));
+
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(wrapper.text()).toContain("480 itens");
+        expect(wrapper.findAll('[role="option"]')).toHaveLength(3);
+    });
 });
 
 /**

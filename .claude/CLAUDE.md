@@ -1463,8 +1463,8 @@ o generic inteiro do `RSelect` não mudam uma linha. Medido com o
 `vue-component-meta`, que é quem gera a tabela do site: `options` sai como
 `Opts | OptionsFn<Opts>` e `modelValue` continua `ModelOf<…>`.
 
-**`page` é 1-based e array vazio encerra.** Sem envelope e sem cursor. São quatro
-camadas contra o loop infinito, e a terceira é a que ninguém lembra:
+**`page` é 1-based e array vazio encerra.** Sem cursor. São cinco camadas contra
+o loop infinito, e a terceira é a que ninguém lembra:
 
 - (a) não reentra se já está carregando, e não tenta depois do fim;
 - (b) array vazio encerra — é o contrato;
@@ -1472,7 +1472,18 @@ camadas contra o loop infinito, e a terceira é a que ninguém lembra:
   encerra, que é a guarda contra a fn que ignora `page` e devolve sempre o mesmo.
   Sem ela o sintoma é o navegador travando;
 - (d) erro para a paginação até um `retry()` explícito — rearmar sozinho é uma
-  tempestade contra um servidor que já está caindo.
+  tempestade contra um servidor que já está caindo;
+- (e) `total` conhecido e alcançado encerra, sem a requisição vazia do fim.
+
+**O envelope `{ items, total }` existe pelo rodapé.** O plano dizia "sem
+envelope", e o array puro continua sendo o contrato; o que o envelope acrescenta
+é o único dado que a paginação não sabe sozinha — quantos itens casam o termo —,
+que é o que o total do rodapé mostra em vez da contagem do que já carregou. O
+discriminador é a chave `items` guardando um objeto (`unwrap`): um `OptObj`
+legítimo não tem essa forma. O último envelope manda (`total` pode só vir na
+página 1, ou ser corrigido a cada resposta), e o `reset()` o esquece. O generic
+`Opts` sai da posição de retorno nas duas formas — medido na fixture
+`SelectTypes.vue`, com `buscar` e `buscarComTotal`.
 
 A corrida é o mesmo discriminador do `useUploadQueue`: cada `load()` faz
 `const mine = ++token` e, na volta, `if (mine !== token) return` **antes de tocar

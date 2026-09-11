@@ -200,7 +200,7 @@
                         name="footer"
                         :status="footerStatus"
                         :retry="retry"
-                        :count="rows.length"
+                        :count="count"
                         :clear="clear"
                     >
                         <div :class="props.ui?.list?.footer?.container">
@@ -262,8 +262,9 @@
      * liga o campo de busca sozinho. `options` em função vai além: o campo pagina,
      * sobe o escolhido ao topo da lista e guarda o rótulo dele.
      *
-     * O painel termina num rodapé com o total de linhas e um botão que esvazia a
-     * seleção; o mesmo X aparece no campo enquanto há algo escolhido.
+     * O painel termina num rodapé com o total de linhas — o da API, quando a fn
+     * devolve `{ items, total }` — e um botão que esvazia a seleção; o mesmo X
+     * aparece no campo enquanto há algo escolhido.
      *
      * @example <RSelect name="uf" :options="ufs" multiple search />
      * @example <RSelect name="form" :options :loading @search="buscar" />
@@ -314,6 +315,7 @@
         OptionItem,
         OptionsContext,
         OptionsFn,
+        OptionsPage,
         OptObj,
         Options,
         Primitive,
@@ -953,9 +955,12 @@
         return undefined;
     });
 
-    const countText = computed(() =>
-        tr(withParams(props.value.text?.count, { n: rows.value.length }))
-    );
+    // O total da API quando ela o manda; senão, o que está na tela.
+    const count = computed(() => {
+        return remoteMode.value ? (remote.total.value ?? rows.value.length) : rows.value.length;
+    });
+
+    const countText = computed(() => tr(withParams(props.value.text?.count, { n: count.value })));
 
     // `[]` em `multiple` e `null` no resto — nunca o `default`, que é o que um X
     // não quer de volta.

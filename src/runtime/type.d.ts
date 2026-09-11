@@ -328,7 +328,7 @@ export type OptionItem<O = unknown, V = unknown, L = unknown> = {
 
 /**
  * O que o campo dá à função de `options`. `page` é **1-based**, e um array vazio
- * encerra a paginação — não há envelope nem cursor a montar.
+ * encerra a paginação — não há cursor a montar.
  *
  * `loaded` é o que já está na lista, para quem prefere paginar por último item em
  * vez de por número. `signal` aborta a requisição obsoleta.
@@ -343,12 +343,22 @@ export type OptionsContext = {
 };
 
 /**
+ * A página com o total, para a API que o tem: `total` é quantos itens casam o
+ * termo, vai ao rodapé no lugar da contagem do que já carregou e encerra a
+ * paginação quando a lista o alcança. O array puro continua valendo.
+ */
+export type OptionsPage<O extends Options = Options> = { items: O; total?: number };
+
+/**
  * `options` como função: quem busca e pagina é o app, e o módulo é dono do ciclo
- * (debounce, página, fim da lista, erro, retry). Devolver array vazio encerra.
+ * (debounce, página, fim da lista, erro, retry). Devolve a página — um array, ou
+ * `{ items, total }` — e um array vazio encerra.
  *
  * @example const options: OptionsFn = ({ search, page, signal }) => $fetch("/api/usuarios", { query: { search, page }, signal });
  */
-export type OptionsFn<O extends Options = Options> = (context: OptionsContext) => O | Promise<O>;
+export type OptionsFn<O extends Options = Options> = (
+    context: OptionsContext
+) => O | OptionsPage<O> | Promise<O | OptionsPage<O>>;
 
 /** O que o campo dá ao `resolve`. Sem `search` nem `page`: é uma tradução, não uma busca. */
 export type ResolveContext = { value: unknown; form: unknown; signal: AbortSignal };
