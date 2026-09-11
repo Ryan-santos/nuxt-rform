@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { Options } from "../../src/runtime/type";
 import normalizeOptions, { getProperty, keyOf } from "../../src/runtime/utils/normalizeOptions";
 
 describe("normalizeOptions", () => {
@@ -39,9 +40,10 @@ describe("normalizeOptions", () => {
     });
 
     it("array misto cai no ramo de objetos — o primitivo fica sem value nem label", () => {
-        expect(
-            normalizeOptions([{ id: 1, name: "Ana" }, "solto"], { value: "id", label: "name" })
-        ).toEqual([
+        // `Options` não expressa array misto; o runtime o atravessa mesmo assim.
+        const mixed = [{ id: 1, name: "Ana" }, "solto"] as unknown as Options;
+
+        expect(normalizeOptions(mixed, { value: "id", label: "name" })).toEqual([
             { value: 1, label: "Ana", original: { id: 1, name: "Ana" } },
             { value: undefined, label: undefined, original: "solto" }
         ]);

@@ -50,7 +50,7 @@ describe("e2e browser: fixture basic", async () => {
         expect(hydrated).toEqual({ count: 1, same: true });
 
         await page.locator('[data-testid="color-select"] > div').first().click();
-        const options = page.locator("#teleports .RUtilsDropdown li");
+        const options = page.locator('#teleports .RUtilsDropdown [role="option"]');
         await options.first().waitFor({ state: "visible" });
 
         expect(await options.allTextContents()).toEqual(["red", "green"]);

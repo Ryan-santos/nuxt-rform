@@ -12,10 +12,8 @@ vi.mock("#rform/defaults", () => ({
     }
 }));
 
-const open = async (wrapper: {
-    findAll: (s: string) => { trigger: (e: string) => Promise<void> }[];
-}) => {
-    await wrapper.findAll("div")[1]!.trigger("click");
+const open = async (wrapper: { get: (s: string) => { trigger: (e: string) => Promise<void> } }) => {
+    await wrapper.get('[aria-haspopup="listbox"]').trigger("click");
 };
 
 /**

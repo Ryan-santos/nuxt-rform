@@ -12,7 +12,12 @@ export default {
             add: "Adicionar"
         },
         select: {
-            search: "Pesquisar"
+            search: "Pesquisar",
+            loading: "Carregando…",
+            loadingMore: "Carregando mais…",
+            empty: "Nada encontrado",
+            failed: "Não foi possível carregar as opções",
+            retry: "Tentar de novo"
         },
         file: {
             placeholder: "Arraste ou clique aqui para adicionar:",

@@ -9,6 +9,9 @@
             <template #default="{ reference }">
                 <div
                     :ref="reference"
+                    role="combobox"
+                    aria-haspopup="listbox"
+                    :aria-expanded="open"
                     :class="[
                         props.ui?.group?.wrapper?.container,
                         open ? props.ui?.group?.wrapper?.open : props.ui?.group?.wrapper?.closed
@@ -79,26 +82,95 @@
                         :class="props.ui?.list?.search?.input"
                     />
                 </div>
-                <ul :class="props.ui?.list?.container">
-                    <li
-                        v-for="(option, key) in filteredOptions"
-                        :key
-                        :class="[
-                            props.ui?.list?.option?.container,
-                            isOptionSelected(option) ? props.ui?.list?.option?.selected : undefined
-                        ]"
-                        @click="select(option)"
+                <div :class="props.ui?.list?.container">
+                    <div
+                        v-if="status === 'loading'"
+                        :class="props.ui?.list?.state"
                     >
-                        <slot
-                            :selected="rowSlot(option)"
-                            :list="true"
+                        <Icon :name="icon('loading')" />
+                        {{ tr(props.text?.loading) }}
+                    </div>
+
+                    <div
+                        v-else-if="status === 'error' && rows.length === 0"
+                        :class="props.ui?.list?.state"
+                    >
+                        <Icon :name="icon('alert')" />
+                        {{ errorText }}
+                        <button
+                            type="button"
+                            :class="props.ui?.list?.retry"
+                            @click.stop="retry"
                         >
-                            <p :class="props.ui?.list?.option?.text">
-                                {{ option.label }}
-                            </p>
-                        </slot>
-                    </li>
-                </ul>
+                            {{ tr(props.text?.retry) }}
+                        </button>
+                    </div>
+
+                    <slot
+                        v-else-if="isEmpty"
+                        name="empty"
+                    >
+                        <div :class="props.ui?.list?.state">
+                            {{ tr(props.text?.empty) }}
+                        </div>
+                    </slot>
+
+                    <div
+                        v-else
+                        ref="scroller"
+                        role="listbox"
+                        :class="props.ui?.list?.scroller"
+                    >
+                        <div
+                            v-for="(option, key) in rows"
+                            :key
+                            role="option"
+                            :aria-selected="isOptionSelected(option)"
+                            :class="[
+                                props.ui?.list?.option?.container,
+                                key === 0 ? props.ui?.list?.option?.first : undefined,
+                                isOptionSelected(option)
+                                    ? props.ui?.list?.option?.selected
+                                    : undefined
+                            ]"
+                            @click="select(option)"
+                        >
+                            <slot
+                                :selected="rowSlot(option)"
+                                :list="true"
+                            >
+                                <p :class="props.ui?.list?.option?.text">
+                                    {{ option.label }}
+                                </p>
+                            </slot>
+                        </div>
+                    </div>
+
+                    <slot
+                        v-if="footerStatus"
+                        name="footer"
+                        :status="footerStatus"
+                        :retry="retry"
+                    >
+                        <div :class="props.ui?.list?.footer">
+                            <template v-if="footerStatus === 'loadingMore'">
+                                <Icon :name="icon('loading')" />
+                                {{ tr(props.text?.loadingMore) }}
+                            </template>
+                            <template v-else>
+                                <Icon :name="icon('alert')" />
+                                {{ errorText }}
+                                <button
+                                    type="button"
+                                    :class="props.ui?.list?.retry"
+                                    @click.stop="retry"
+                                >
+                                    {{ tr(props.text?.retry) }}
+                                </button>
+                            </template>
+                        </div>
+                    </slot>
+                </div>
             </template>
         </RUtilsDropdown>
 
@@ -121,7 +193,7 @@
      * @example <RSelect name="uf" :options="ufs" multiple search />
      * @example <RSelect name="form" :options :loading @search="buscar" />
      */
-    import { computed, ref, watch } from "vue";
+    import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
     import { useField } from "#rform/composables";
     import type {
@@ -144,6 +216,9 @@
         keyOf,
         normalizeOptions
     } from "#rform/utils";
+
+    import { injectFormRoot } from "../../composables/formRoot";
+    import useRemoteOptions, { type ListStatus } from "../../composables/useRemoteOptions";
 
     // Os formatos de `options` moram em `#rform/types`, ao lado do `UploadFn`: são
     // contrato de função de app, e o `#rform/builtin/fields/Select.vue` continua
@@ -235,27 +310,41 @@
             },
             list: {
                 search: {
-                    container: "sticky top-0 z-0 bg-(--rf-color-background-300)",
+                    container: "relative shrink-0 bg-(--rf-color-background-300)",
                     icon: "absolute top-1/2 left-3 -z-1 -translate-y-1/2 opacity-60",
                     input: `
                         w-full p-3 pl-10 outline-0
                         placeholder:text-current/30
                     `
                 },
-                container: "divide-y divide-(--rf-color-border)",
+                container: "flex min-h-0 flex-1 flex-col",
+                scroller: "min-h-0 flex-1 overflow-auto overscroll-contain",
                 option: {
                     container: `
-                        flex w-full cursor-pointer flex-row items-center gap-1 p-3
-                        transition-all duration-300
+                        flex w-full cursor-pointer flex-row items-center gap-1 border-t
+                        border-(--rf-color-border) p-3 transition-all duration-300
                         hover:bg-(--rf-color-primary)/20
                     `,
+                    first: "border-t-0",
                     selected: "text-(--rf-color-primary-fg) bg-(--rf-color-primary)!",
                     text: "truncate"
-                }
+                },
+                state: `
+                    flex flex-row items-center justify-center gap-2 p-3 text-sm
+                    opacity-60
+                `,
+                footer: `
+                    flex shrink-0 flex-row items-center justify-center gap-2 border-t
+                    border-(--rf-color-border) p-3 text-sm
+                `,
+                retry: "cursor-pointer underline underline-offset-2"
             },
             Utils: {
                 Dropdown: {
-                    popover: `[--max-height:25rem] overflow-auto rounded-(--rf-radius-lg) border border-(--rf-color-border) bg-(--rf-color-background-100)`
+                    popover: `
+                        [--max-height:25rem] flex flex-col overflow-hidden rounded-(--rf-radius-lg) border border-(--rf-color-border)
+                        bg-(--rf-color-background-100)
+                    `
                 }
             }
         },
@@ -265,7 +354,12 @@
         pick: { value: "id", label: "name" },
         search: false,
         text: {
-            search: "search"
+            search: "search",
+            loading: "loading",
+            loadingMore: "loadingMore",
+            empty: "empty",
+            failed: "failed",
+            retry: "retry"
         }
     });
 
@@ -386,9 +480,17 @@
         default(props: { selected: Selected; list: boolean }): void;
         leading(): void;
         trailing(): void;
+        /** No lugar da lista, quando não há nada a mostrar. */
+        empty(): void;
+        /** A faixa abaixo da lista: a próxima página em voo, ou o erro com retry. */
+        footer(props: { status: ListStatus; retry: () => void }): void;
     }>();
 
     const { model, props, tr } = await useField(_props as unknown as InternalProps);
+
+    // Por caminho relativo, como o `Form.vue` faz: o barrel `#rform/composables` só
+    // reexporta o default de cada arquivo.
+    const formRoot = injectFormRoot();
 
     const isRecord = (value: unknown): value is Record<string, unknown> => {
         return typeof value === "object" && value !== null;
@@ -403,17 +505,6 @@
     // puro e devolve `unknown`, e é o generic de `options` que diz o que ele é.
     const asItems = (items: OptionItem[]): Item[] => items as Item[];
 
-    /** A lista estática. Com `options` função quem manda é a fila remota. */
-    const _options = computed<Item[]>(() => {
-        const { options } = props.value;
-
-        if (typeof options === "function") {
-            return [];
-        }
-
-        return asItems(normalizeOptions(options, keys.value));
-    });
-
     // `term`, e não `search`: o vue-tsc intersecciona props e bindings do setup no
     // contexto do template, e um ref de string com o nome da prop booleana reduz o
     // componente inteiro a `never`.
@@ -425,17 +516,57 @@
     watch(term, (current) => _props.onSearch?.(current));
 
     // `@search` liga a busca sozinho: o termo só nasce no input, então um
-    // `<RSelect @search>` sem `search` nunca dispararia nada — calado.
+    // `<RSelect @search>` sem `search` nunca dispararia nada — calado. `options`
+    // função **não** liga: ela pagina sem termo nenhum, e lista infinita sem busca
+    // é uso legítimo.
     const searchable = computed(() => props.value.search || Boolean(_props.onSearch));
+
+    /** A fn de `options`, quando há uma. É ela que decide "remoto". */
+    const remoteFn = computed(() => {
+        const { options } = props.value;
+
+        return typeof options === "function" ? (options as OptionsFn) : undefined;
+    });
+
+    const remoteMode = computed(() => Boolean(remoteFn.value));
+
+    // Opt-out por `false` na prop crua, como o `upload`/`remove` do `RFile`: com o
+    // app padronizando `resolve` pelo `defineFieldDefaults`, um campo precisa de
+    // como recusar, e `:resolve="undefined"` não serve — o `merger` não apaga.
+    const resolveFn = computed(() => fnProp<ResolveFn>(_props.resolve, props.value.resolve));
+
+    // Lido da prop **crua** na frente pelo mesmo motivo, e por um a mais: com
+    // `defaults.debounce = 300`, um `:debounce="0"` seria engolido pela regra "não
+    // apaga" do `merger`, e desligar o debounce ficaria impossível — calado.
+    const debounce = computed(() => _props.debounce ?? props.value.debounce ?? 300);
+
+    const remote = useRemoteOptions({
+        fn: () => remoteFn.value,
+        resolve: () => resolveFn.value,
+        pick: () => keys.value,
+        search: () => term.value.trim(),
+        value: () => model.value,
+        form: () => formRoot?.value,
+        fallback: () => tr(props.value.text?.failed)
+    });
+
+    /** A lista estática, ou a página corrente da remota. */
+    const _options = computed<Item[]>(() => {
+        if (remoteMode.value) {
+            return asItems(remote.items.value);
+        }
+
+        return asItems(normalizeOptions(props.value.options as Options, keys.value));
+    });
 
     const filteredOptions = computed<Item[]>(() => {
         const query = term.value.trim().toLowerCase();
 
-        // Quem escuta `@search` assume o filtro: a lista que voltou já é a resposta
-        // ao termo, e filtrá-la de novo aqui esconderia item que o servidor casou
-        // por um campo que não é a label — um contato achado pelo telefone sumiria
-        // enquanto se digita o telefone.
-        if (!query || !props.value.search || _props.onSearch) {
+        // Quem escuta `@search` assume o filtro, e `options` função idem: a lista
+        // que voltou já é a resposta ao termo, e filtrá-la de novo aqui esconderia
+        // item que o servidor casou por um campo que não é a label — um contato
+        // achado pelo telefone sumiria enquanto se digita o telefone.
+        if (!query || !props.value.search || _props.onSearch || remoteMode.value) {
             return _options.value;
         }
 
@@ -448,6 +579,10 @@
 
     const select = (option: Item) => {
         const stored = props.value.modelFull ? option.original : option.value;
+
+        // Semeia **antes** de escrever no model: é o que faz o rótulo sobreviver a
+        // digitar na busca, paginar e reabrir o painel.
+        remote.remember(option);
 
         if (!props.value.multiple) {
             model.value = stored;
@@ -472,35 +607,72 @@
         model.value = list;
     };
 
-    const matchesModel = (value: unknown): boolean => {
-        const key = props.value.pick?.value;
+    /** Os valores que estão no model, sempre como lista. */
+    const modelValues = computed<unknown[]>(() => {
         const current = model.value as unknown;
 
-        if (props.value.multiple && Array.isArray(current)) {
-            const arr = current as unknown[];
-
-            if (props.value.modelFull && key) {
-                return arr.some((item) => isRecord(item) && item[key] === value);
-            }
-
-            return arr.includes(value);
+        if (props.value.multiple) {
+            return Array.isArray(current) ? current : [];
         }
 
-        if (props.value.modelFull && key && isRecord(current)) {
-            return value === current[key];
+        return current === undefined || current === null || current === "" ? [] : [current];
+    });
+
+    /** O valor de uma entrada do model — o objeto inteiro em `modelFull`, senão ele mesmo. */
+    const valueOfEntry = (entry: unknown): unknown => {
+        const key = props.value.pick?.value;
+
+        return props.value.modelFull && key && isRecord(entry) ? entry[key] : entry;
+    };
+
+    /**
+     * A leitura tem duas etapas: a página corrente responde primeiro, e só o que ela
+     * não responde cai no cache. Se o cache absorvesse a lista, cinquenta buscas
+     * seguidas acumulariam cinquenta páginas que ninguém mais lê.
+     *
+     * Com `modelFull` não há cache nem `resolve`: o model **é** o objeto, e o rótulo
+     * sai dele por `getProperty`. É a rota barata para tela de edição.
+     */
+    const itemFor = (entry: unknown): Item | undefined => {
+        const value = valueOfEntry(entry);
+        const onPage = _options.value.find((item) => item.value === value);
+
+        if (onPage) {
+            return onPage;
         }
 
-        return value === current;
+        if (props.value.modelFull && isRecord(entry)) {
+            return asItems([
+                { value, label: getProperty(entry, keys.value.label), original: entry }
+            ]).at(0);
+        }
+
+        const cached = remote.pinned.value.get(keyOf(value));
+
+        if (cached) {
+            return asItems([cached]).at(0);
+        }
+
+        // Em modo remoto o valor cru evita o piscar de vazio até o `resolve` voltar;
+        // em modo estático "não está na lista" é "não existe", e mudar isso seria
+        // alteração semântica calada no caminho que todo mundo já usa.
+        if (remoteMode.value) {
+            return asItems([{ value, label: value, original: entry }]).at(0);
+        }
+
+        return undefined;
     };
 
     const selected = computed<Item | Item[] | undefined>(() => {
-        const filtered = _options.value.filter(({ value }) => matchesModel(value));
+        const found = modelValues.value
+            .map((entry) => itemFor(entry))
+            .filter((item): item is Item => item !== undefined);
 
         if (props.value.multiple) {
-            return filtered;
+            return found;
         }
 
-        return filtered.at(0);
+        return found.at(0);
     });
 
     const hasSelection = computed(() => {
@@ -530,4 +702,89 @@
     const open = ref(false);
 
     const dropdownMiddleware = [dropdownFit()];
+
+    const scroller = useTemplateRef<HTMLElement>("scroller");
+
+    /** As linhas do painel. Em modo estático é a lista inteira, filtrada ou não. */
+    const rows = computed<Item[]>(() => filteredOptions.value);
+
+    const status = computed(() => remote.status.value);
+
+    const isEmpty = computed(() => rows.value.length === 0);
+
+    const errorText = computed(() => remote.message.value || tr(props.value.text?.failed));
+
+    const retry = () => remote.retry();
+
+    /**
+     * O rodapé só existe para o que acontece **abaixo** de uma lista que já tem
+     * linhas: a próxima página em voo, e o erro que não pode tomar a tela inteira.
+     */
+    const footerStatus = computed<ListStatus | undefined>(() => {
+        if (status.value === "loadingMore") {
+            return "loadingMore";
+        }
+
+        if (status.value === "error" && rows.value.length > 0) {
+            return "error";
+        }
+
+        return undefined;
+    });
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    // Trocar o termo zera tudo e **dispara a página 1 direto**: o observer só reporta
+    // mudança de interseção, então a primeira página nunca pode depender dele.
+    watch(term, () => {
+        if (!remoteMode.value) {
+            return;
+        }
+
+        clearTimeout(timer);
+
+        const wait = debounce.value;
+        const run = () => remote.reset();
+
+        if (wait <= 0) {
+            run();
+            return;
+        }
+
+        timer = setTimeout(run, wait);
+    });
+
+    // Primeiro `open`, e não antes: o painel já é lazy, e carregar na montagem seria
+    // uma requisição por campo na tela. Fechar **não** reseta — reabrir não custa.
+    watch(
+        open,
+        (isOpen) => {
+            if (isOpen && remoteMode.value) {
+                remote.first();
+            }
+        },
+        { flush: "post" }
+    );
+
+    // O `resolve` é client-only, por `onMounted`: a alternativa (`useAsyncData`)
+    // quebraria a regra de que nada em `src/` importa `#app`, e quebraria o campo
+    // montado fora de app Nuxt, que é o projeto `unit`.
+    onMounted(() => {
+        if (remoteMode.value && !props.value.modelFull) {
+            remote.hydrate(modelValues.value);
+        }
+    });
+
+    // O model mudando por fora — reset do Form, `carregar(id)` de um CRUD — é a outra
+    // porta de entrada do `resolve`.
+    watch(modelValues, (values) => {
+        if (remoteMode.value && !props.value.modelFull) {
+            remote.hydrate(values);
+        }
+    });
+
+    onUnmounted(() => {
+        clearTimeout(timer);
+        remote.stop();
+    });
 </script>

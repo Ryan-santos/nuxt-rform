@@ -11,7 +11,12 @@ const en: Messages = {
             add: "Add"
         },
         select: {
-            search: "Search"
+            search: "Search",
+            loading: "Loading…",
+            loadingMore: "Loading more…",
+            empty: "Nothing found",
+            failed: "Could not load the options",
+            retry: "Try again"
         },
         file: {
             placeholder: "Drag or click here to add:",

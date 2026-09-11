@@ -61,7 +61,7 @@ describe("painel do dropdown", () => {
         expect(classes).toContain("w-80");
         expect(classes).not.toContain("w-(--width)");
         // O resto da aparência do painel sobrevive ao override de largura.
-        expect(classes).toContain("overflow-auto");
+        expect(classes).toContain("overflow-hidden");
         expect(classes).toContain("z-999");
     });
 
@@ -103,7 +103,30 @@ describe("painel do dropdown", () => {
         // A mesma arbitrary property substitui, não acumula.
         expect(classes).not.toContain("[--max-height:25rem]");
         expect(classes).toContain(FIT);
-        expect(classes).toContain("overflow-auto");
+        expect(classes).toContain("overflow-hidden");
+    });
+
+    // O painel continua dono da **aparência** (endereço único
+    // `ui.Utils.Dropdown.popover`); o que ele deixou de ser é dono do **scroll** —
+    // quem rola é o `[role=listbox]` do Select, que é o que o observer de
+    // paginação precisa poder usar de `root`.
+    it("o painel do Select não rola: quem rola é a lista", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: ["a", "b"] } as never
+        });
+
+        await wrapper.get('[aria-haspopup="listbox"]').trigger("click");
+
+        const classes = popover(wrapper);
+
+        expect(classes).toContain("overflow-hidden");
+        expect(classes).toContain("flex");
+        expect(classes).toContain("flex-col");
+
+        const scroller = wrapper.get('[role="listbox"]');
+
+        expect(scroller.classes()).toContain("overflow-auto");
+        expect(scroller.classes()).toContain("overscroll-contain");
     });
 });
 describe("onde o painel mora", () => {

@@ -6,10 +6,11 @@ import { RSelect } from "#components";
 
 // O popover só monta o conteúdo no primeiro `open`, então toda asserção sobre
 // opção precisa abri-lo antes — o mesmo clique que um usuário dá.
-const open = async (wrapper: {
-    findAll: (s: string) => { trigger: (e: string) => Promise<void> }[];
-}) => {
-    await wrapper.findAll("div")[1]!.trigger("click");
+//
+// Pelo `aria-haspopup`, e não por `findAll("div")[1]`: o índice no DOM quebra a
+// cada mudança de markup, e o papel é o que o gatilho de fato é.
+const open = async (wrapper: { get: (s: string) => { trigger: (e: string) => Promise<void> } }) => {
+    await wrapper.get('[aria-haspopup="listbox"]').trigger("click");
 };
 
 describe("RSelect", () => {
@@ -20,7 +21,7 @@ describe("RSelect", () => {
 
         await open(wrapper);
 
-        const items = wrapper.findAll("li");
+        const items = wrapper.findAll('[role="option"]');
         expect(items).toHaveLength(3);
         expect(items.map((i) => i.text())).toEqual(["a", "b", "c"]);
     });
@@ -32,7 +33,7 @@ describe("RSelect", () => {
 
         await open(wrapper);
 
-        const labels = wrapper.findAll("li").map((li) => li.text());
+        const labels = wrapper.findAll('[role="option"]').map((li) => li.text());
         expect(labels).toContain("Foo Label");
         expect(labels).toContain("Bar Label");
     });
@@ -43,7 +44,7 @@ describe("RSelect", () => {
         });
 
         await open(wrapper);
-        await wrapper.findAll("li")[1]!.trigger("click");
+        await wrapper.findAll('[role="option"]')[1]!.trigger("click");
         const emits = wrapper.emitted("update:modelValue");
         expect(emits?.at(-1)?.[0]).toBe("b");
     });
@@ -55,7 +56,7 @@ describe("RSelect", () => {
 
         await open(semBusca);
         expect(semBusca.findAll("input[type=search]")).toHaveLength(0);
-        expect(semBusca.findAll("li")).toHaveLength(2);
+        expect(semBusca.findAll('[role="option"]')).toHaveLength(2);
 
         const comBusca = await mountSuspended(RSelect, {
             props: { options: ["a", "b"], search: true } as never
@@ -73,7 +74,7 @@ describe("RSelect", () => {
         await open(wrapper);
         await wrapper.find("input[type=search]").setValue("ga");
 
-        expect(wrapper.findAll("li").map((li) => li.text())).toEqual(["gama"]);
+        expect(wrapper.findAll('[role="option"]').map((li) => li.text())).toEqual(["gama"]);
     });
 
     it("reporta o termo digitado pelo @search", async () => {
@@ -103,7 +104,7 @@ describe("RSelect", () => {
         await open(wrapper);
         await wrapper.find("input[type=search]").setValue("ga");
 
-        expect(wrapper.findAll("li").map((li) => li.text())).toEqual([
+        expect(wrapper.findAll('[role="option"]').map((li) => li.text())).toEqual([
             "alfa",
             "beta",
             "gama"
@@ -134,7 +135,7 @@ describe("RSelect", () => {
         });
 
         await open(wrapper);
-        await wrapper.findAll("li")[0]!.trigger("click");
+        await wrapper.findAll('[role="option"]')[0]!.trigger("click");
         const emits = wrapper.emitted("update:modelValue");
         expect(Array.isArray(emits?.at(-1)?.[0])).toBe(true);
         expect(emits?.at(-1)?.[0]).toEqual(["a"]);
