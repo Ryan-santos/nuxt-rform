@@ -111,7 +111,7 @@
     import { useField } from "#rform/composables";
     import type { Element, FileEntry, TextProp, TrInput, Uploaded, UploadFn } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { acceptMatch, defineDefaults, formatBytes, icon } from "#rform/utils";
+    import { acceptMatch, defineDefaults, fnProp, formatBytes, icon } from "#rform/utils";
 
     import { injectPendingList } from "../../composables/pendingList";
     import useUploadQueue from "../../composables/useUploadQueue";
@@ -317,19 +317,6 @@
     const failures = ref(new Map<unknown, string>());
 
     const busy = ref(false);
-
-    /**
-     * A prop depois do opt-out: `false` no call site desliga o que o `defaults.ts`
-     * padronizou. Lida da prop **crua**, porque o `merger` já teria descartado o
-     * `false` — é a mesma razão do `focusError` do `RForm`.
-     */
-    const fnProp = <T>(raw: unknown, merged: unknown): T | undefined => {
-        if (raw === false) {
-            return undefined;
-        }
-
-        return typeof merged === "function" ? (merged as T) : undefined;
-    };
 
     const upload = computed(() => fnProp<UploadFn>(_props.upload, props.value.upload));
     const remove = computed(() =>

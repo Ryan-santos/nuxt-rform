@@ -305,3 +305,60 @@ export type ConditionGroup<C> = { or: readonly C[] } | { not: C } | readonly C[]
 export type Condition =
     | ConditionLeaf
     | ConditionGroup<ConditionLeaf | ConditionGroup<ConditionLeaf | ConditionGroup<ConditionLeaf>>>;
+/* ------------------------------------------------------------------ RSelect */
+
+/** O que um `options` em array de primitivos guarda. */
+export type Primitive = string | number | boolean;
+export type OptArray = Array<Primitive>;
+export type OptArrayObj = Record<string | number, unknown>[];
+export type OptObj<T = unknown> = Record<string | number, T>;
+
+/** Os três formatos que o `RSelect` aceita em `options`. */
+export type Options = OptArray | OptArrayObj | OptObj;
+
+/**
+ * Uma opção já normalizada: o que vai ao model (`value`), o que se lê na tela
+ * (`label`) e o item de onde os dois saíram (`original`, o que o `modelFull` guarda).
+ */
+export type OptionItem<O = unknown, V = unknown, L = unknown> = {
+    value: V;
+    label: L;
+    original: O;
+};
+
+/**
+ * O que o campo dá à função de `options`. `page` é **1-based**, e um array vazio
+ * encerra a paginação — não há envelope nem cursor a montar.
+ *
+ * `loaded` é o que já está na lista, para quem prefere paginar por último item em
+ * vez de por número. `signal` aborta a requisição obsoleta.
+ */
+export type OptionsContext = {
+    search: string;
+    value: unknown;
+    form: unknown;
+    page: number;
+    loaded: OptionItem[];
+    signal: AbortSignal;
+};
+
+/**
+ * `options` como função: quem busca e pagina é o app, e o módulo é dono do ciclo
+ * (debounce, página, fim da lista, erro, retry). Devolver array vazio encerra.
+ *
+ * @example const options: OptionsFn = ({ search, page, signal }) => $fetch("/api/usuarios", { query: { search, page }, signal });
+ */
+export type OptionsFn<O extends Options = Options> = (context: OptionsContext) => O | Promise<O>;
+
+/** O que o campo dá ao `resolve`. Sem `search` nem `page`: é uma tradução, não uma busca. */
+export type ResolveContext = { value: unknown; form: unknown; signal: AbortSignal };
+
+/**
+ * Traduz o valor que já está no model no item correspondente, para a tela de edição
+ * mostrar o rótulo em vez do id. Só é chamada quando `options` é função e nem a
+ * página corrente nem o cache respondem pela chave — com `modelFull` o model já é o
+ * objeto, e `resolve` não é preciso.
+ *
+ * @example const resolve: ResolveFn = ({ value, signal }) => $fetch(`/api/usuarios/${value}`, { signal }).then((u) => [u]);
+ */
+export type ResolveFn<O extends Options = Options> = (context: ResolveContext) => O | Promise<O>;

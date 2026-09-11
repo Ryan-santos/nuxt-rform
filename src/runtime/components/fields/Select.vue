@@ -124,15 +124,42 @@
     import { computed, ref, watch } from "vue";
 
     import { useField } from "#rform/composables";
-    import type { Element, TextProp } from "#rform/types";
+    import type {
+        Element,
+        OptArrayObj,
+        OptionItem,
+        Options,
+        OptionsFn,
+        Primitive,
+        ResolveFn,
+        TextProp
+    } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, dropdownFit, icon } from "#rform/utils";
+    import {
+        defineDefaults,
+        dropdownFit,
+        fnProp,
+        getProperty,
+        icon,
+        keyOf,
+        normalizeOptions
+    } from "#rform/utils";
 
-    export type Primitive = string | number | boolean;
-    export type OptArray = Array<Primitive>;
-    export type OptArrayObj = Record<string | number, unknown>[];
-    export type OptObj<T = unknown> = Record<string | number, T>;
-    export type Options = OptArray | OptArrayObj | OptObj;
+    // Os formatos de `options` moram em `#rform/types`, ao lado do `UploadFn`: são
+    // contrato de função de app, e o `#rform/builtin/fields/Select.vue` continua
+    // alcançando os nomes daqui.
+    export type {
+        OptArray,
+        OptArrayObj,
+        OptionItem,
+        OptionsContext,
+        OptionsFn,
+        OptObj,
+        Options,
+        Primitive,
+        ResolveContext,
+        ResolveFn
+    } from "#rform/types";
 
     /** O item bruto de `options`: elemento do array, ou valor do objeto. */
     export type OptionOf<Opts> = Opts extends readonly (infer U)[]
@@ -180,12 +207,6 @@
      */
     export type OptionKey<Opts> =
         OptionOf<Opts> extends Primitive ? string : (keyof OptionOf<Opts> & string) | (string & {});
-
-    export type OptionItem<O = unknown, V = unknown, L = unknown> = {
-        value: V;
-        label: L;
-        original: O;
-    };
 
     export const defaults = defineDefaults({
         ui: {
@@ -279,7 +300,14 @@
         Utils["Loading"] &
         Utils["Placeholder"] &
         TextProp<typeof defaults.text> & {
-            options: Opts;
+            // `Opts` continua sendo o tipo dos **dados**, nunca o da função: o TS o
+            // infere de uma posição de retorno tão bem quanto de um valor, então
+            // `OriginalOf`/`ValueOf` não mudam uma linha.
+            options: Opts | OptionsFn<Opts>;
+            /** Traduz o valor do model no item, para a tela de edição mostrar o rótulo. */
+            resolve?: ResolveFn<Opts> | false;
+            /** Espera antes de levar o termo à fn de `options`. `0` desliga. */
+            debounce?: number;
             // Escrito por extenso, e não num alias de dois parâmetros: com a
             // interseção atrás de um alias, o `Element` de todo campo estoura o
             // "union type too complex".
@@ -310,7 +338,9 @@
         Utils["Loading"] &
         Utils["Placeholder"] &
         TextProp<typeof defaults.text> & {
-            options: Options;
+            options: Options | OptionsFn;
+            resolve?: ResolveFn | false;
+            debounce?: number;
             pick?: { value?: string; label?: string };
             modelFull?: boolean;
             multiple?: boolean;
@@ -342,7 +372,8 @@
         defineProps<Props<Opts, Multiple, KeyValue, KeyLabel, ModelFull>>(),
         {
             disabled: undefined,
-            search: undefined
+            search: undefined,
+            resolve: undefined
         }
     );
 
@@ -363,58 +394,24 @@
         return typeof value === "object" && value !== null;
     };
 
-    const getProperty = (obj: unknown, path: string | undefined): unknown => {
-        if (!path || !isRecord(obj)) {
-            return undefined;
-        }
+    // `keys`, e não `pick`: o vue-tsc intersecciona props e bindings do setup no
+    // contexto do template, e um binding com o nome de uma prop reduz o componente
+    // inteiro a `never` — é a mesma parede que fez o `search` virar `term`.
+    const keys = computed(() => props.value.pick ?? {});
 
-        return path.split(".").reduce<unknown>((acc, part) => {
-            return isRecord(acc) ? acc[part] : undefined;
-        }, obj);
-    };
+    // O único ponto onde o dinâmico vira o tipo declarado: o `normalizeOptions` é
+    // puro e devolve `unknown`, e é o generic de `options` que diz o que ele é.
+    const asItems = (items: OptionItem[]): Item[] => items as Item[];
 
-    /**
-     * O único ponto onde o dinâmico vira o tipo declarado: `getProperty` devolve
-     * `unknown`, e é o generic de `options` que diz o que ele de fato é.
-     */
-    const toItem = (value: unknown, label: unknown, original: unknown): Item => {
-        return { value, label, original } as Item;
-    };
-
+    /** A lista estática. Com `options` função quem manda é a fila remota. */
     const _options = computed<Item[]>(() => {
-        const { options, pick } = props.value;
+        const { options } = props.value;
 
-        if (!options) {
+        if (typeof options === "function") {
             return [];
         }
 
-        if (Array.isArray(options)) {
-            if (options.length === 0) {
-                return [];
-            }
-
-            if (options.every((entry) => typeof entry !== "object" || entry === null)) {
-                return options.map((entry) => toItem(entry, entry, entry));
-            }
-
-            return options.map((entry) => {
-                return toItem(
-                    getProperty(entry, pick?.value),
-                    getProperty(entry, pick?.label),
-                    entry
-                );
-            });
-        }
-
-        if (typeof options === "object") {
-            return Object.entries(options).map(([key, value]) => {
-                const label = isRecord(value) ? getProperty(value, pick?.label) : value;
-
-                return toItem(key, label, { [key]: value });
-            });
-        }
-
-        return [];
+        return asItems(normalizeOptions(options, keys.value));
     });
 
     // `term`, e não `search`: o vue-tsc intersecciona props e bindings do setup no
