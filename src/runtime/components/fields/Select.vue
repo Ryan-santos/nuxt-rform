@@ -626,9 +626,11 @@
     // como recusar, e `:resolve="undefined"` não serve — o `merger` não apaga.
     const resolveFn = computed(() => fnProp<ResolveFn>(_props.resolve, props.value.resolve));
 
-    // Lido da prop **crua** na frente pelo mesmo motivo, e por um a mais: com
-    // `defaults.debounce = 300`, um `:debounce="0"` seria engolido pela regra "não
-    // apaga" do `merger`, e desligar o debounce ficaria impossível — calado.
+    // Fora do `defaults`, como o `focusError` do `RForm`: um `300` ali seria um
+    // resultado truthy, e a regra "não apaga" do `merger` engoliria todo
+    // `:debounce="0"` — desligar o debounce ficaria impossível, calado. O `merger`
+    // copia a chave do `defineFieldDefaults` de qualquer jeito, então padronizar
+    // pelo app continua valendo; e aí é a leitura crua que devolve o `0` à tag.
     const debounce = computed(() => _props.debounce ?? props.value.debounce ?? 300);
 
     const remote = useRemoteOptions({
