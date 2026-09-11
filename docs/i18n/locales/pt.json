@@ -110,7 +110,8 @@
             "semBusca": "Lista curta — o padrão, sem busca",
             "cidade": "Cidade — busque também pela UF",
             "erro": "Essa opção saiu do catálogo.",
-            "listaLonga": "5.000 opções — virtualizada acima de 100"
+            "listaLonga": "5.000 opções — virtualizada acima de 100",
+            "equipe": "Equipe — multiple, contra a API"
         },
         "switch": {
             "notificacoes": "Notificações",
