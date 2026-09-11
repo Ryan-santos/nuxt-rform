@@ -111,7 +111,14 @@
     import { useField } from "#rform/composables";
     import type { Element, FileEntry, TextProp, TrInput, Uploaded, UploadFn } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { acceptMatch, defineDefaults, fnProp, formatBytes, icon } from "#rform/utils";
+    import {
+        acceptMatch,
+        defineDefaults,
+        fnProp,
+        formatBytes,
+        icon,
+        withParams
+    } from "#rform/utils";
 
     import { injectPendingList } from "../../composables/pendingList";
     import useUploadQueue from "../../composables/useUploadQueue";
@@ -273,24 +280,6 @@
 
     const isUploaded = (value: unknown): value is Uploaded =>
         !isFile(value) && typeof value === "object" && value !== null && "url" in value;
-
-    /**
-     * Acrescenta params a uma prop de texto, que chega como chave ou como o par
-     * `{ key, params }` — as duas formas que o `TrInput` de um app com i18n permite.
-     */
-    const withParams = (input: unknown, params: Record<string, unknown>) => {
-        if (typeof input === "string") {
-            return { key: input, params };
-        }
-
-        if (input && typeof input === "object" && "key" in input) {
-            const source = input as { key: string; params?: Record<string, unknown> };
-
-            return { key: source.key, params: { ...source.params, ...params } };
-        }
-
-        return "";
-    };
 
     const sizeLabel = (bytes: number) => {
         const { value, unit } = formatBytes(bytes);
