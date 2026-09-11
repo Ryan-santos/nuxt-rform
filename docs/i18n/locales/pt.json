@@ -109,7 +109,8 @@
             "comBusca": "Lista longa — com search",
             "semBusca": "Lista curta — o padrão, sem busca",
             "cidade": "Cidade — busque também pela UF",
-            "erro": "Essa opção saiu do catálogo."
+            "erro": "Essa opção saiu do catálogo.",
+            "listaLonga": "5.000 opções — virtualizada acima de 100"
         },
         "switch": {
             "notificacoes": "Notificações",

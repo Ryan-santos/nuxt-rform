@@ -109,7 +109,8 @@
             "comBusca": "Long list — with search",
             "semBusca": "Short list — the default, no search",
             "cidade": "City — search by state too",
-            "erro": "That option left the catalogue."
+            "erro": "That option left the catalogue.",
+            "listaLonga": "5,000 options — virtualized above 100"
         },
         "switch": {
             "notificacoes": "Notifications",

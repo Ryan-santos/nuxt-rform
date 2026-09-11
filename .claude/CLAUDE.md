@@ -1442,11 +1442,262 @@ nenhum campo lê `_props` fora do script — o `File` e o `Pin` fazem o mesmo.
 lista; reabrir mostra a resposta anterior sem disparar `@search` de novo. Decisão
 explícita, e a mesma da busca local.
 
-**O que não é do campo**: manter o selecionado dentro de `options`. O rótulo sai
-do casamento com a lista, então uma busca que não devolva o item já escolhido
-deixa o campo em branco com o model intacto. Resolver aqui exigiria o campo
-guardar um cache de rótulos que ele não tem como invalidar; quem tem os dados é
-quem responde ao `@search`. Está escrito como aviso nas duas páginas do site.
+**O que não é do campo, no `@search`**: manter o selecionado dentro de `options`. O
+rótulo sai do casamento com a lista, então uma busca que não devolva o item já
+escolhido deixa o campo em branco com o model intacto. Quem tem os dados é quem
+responde ao `@search`. **Isso vale só para o `@search`** — a rota de `options` em
+função resolve o problema com um cache de rótulos, adiante.
+
+#### `options` em função: o campo passa a ser dono do ciclo
+
+`options: Opts | OptionsFn<Opts>`. Com uma função ali, quem busca é o app e o
+módulo fica com o **ciclo** — debounce, número da página, fim da lista, erro com
+retry, cache de rótulos. O estado mora em `useRemoteOptions`
+(`composables/useRemoteOptions.ts`), no molde do `useUploadQueue`: opções entram
+como **getters**, a mensagem entra como `fallback: () => tr(...)`, e a composable
+fica sem tradução dentro — que é o que a mantém testável no projeto `unit`.
+
+`Opts` continua sendo o tipo dos **dados**, nunca o da função: o TS o infere de
+uma posição de retorno tão bem quanto de um valor, então `OriginalOf`/`ValueOf` e
+o generic inteiro do `RSelect` não mudam uma linha. Medido com o
+`vue-component-meta`, que é quem gera a tabela do site: `options` sai como
+`Opts | OptionsFn<Opts>` e `modelValue` continua `ModelOf<…>`.
+
+**`page` é 1-based e array vazio encerra.** Sem envelope e sem cursor. São quatro
+camadas contra o loop infinito, e a terceira é a que ninguém lembra:
+
+- (a) não reentra se já está carregando, e não tenta depois do fim;
+- (b) array vazio encerra — é o contrato;
+- (c) **página que não faz a lista crescer** (depois de deduplicar por `keyOf`)
+  encerra, que é a guarda contra a fn que ignora `page` e devolve sempre o mesmo.
+  Sem ela o sintoma é o navegador travando;
+- (d) erro para a paginação até um `retry()` explícito — rearmar sozinho é uma
+  tempestade contra um servidor que já está caindo.
+
+A corrida é o mesmo discriminador do `useUploadQueue`: cada `load()` faz
+`const mine = ++token` e, na volta, `if (mine !== token) return` **antes de tocar
+em qualquer coisa**. O `reset()` também incrementa. `signal` entra no contexto
+porque abortar a requisição obsoleta é mais barato que deixá-la correr para
+descartar o resultado — mas o token existe de qualquer jeito, porque ele protege
+a máquina de estado mesmo do app que ignora o signal.
+
+**`debounce` tem a armadilha do `focusError`.** Com `defaults.debounce = 300`, um
+`:debounce="0"` seria engolido: o `merger` pula quando o resultado é truthy e o
+valor novo é falsy, e `0` é falsy. A saída é ler a prop crua na frente, como o
+`RFile` faz com `upload`/`remove`. Ele **não** entra no `withDefaults`, porque
+`debounce?: number` compila com `type: Number` e não há casting booleano a
+desfazer.
+
+**`options` função não liga a busca sozinha**, ao contrário do `@search`. A razão
+é a assimetria: o termo só nasce no input, então um `<RSelect @search>` sem
+`search` nunca dispararia nada — calado; já uma lista infinita **sem** termo é uso
+legítimo, e ligar o campo de busca ali seria surpresa. O que ela faz é entrar no
+`filteredOptions` como mais uma cláusula de desistência do filtro local, ao lado
+do `onSearch` e pelo mesmo motivo.
+
+#### O cache de rótulos, e as quatro fontes que o semeiam
+
+```ts
+const keyOf = (value: unknown) =>
+    value !== null && typeof value === "object"
+        ? `o:${JSON.stringify(value)}`
+        : `${typeof value}:${String(value)}`;   // number:1 ≠ string:1
+```
+
+A chave não pode ser o objeto — o model guarda `42`, um primitivo, e em
+`modelFull` guarda um objeto remontado a cada resposta —, então é uma string. É a
+diferença para os dois caches do `RFile`, cujas chaves têm identidade estável
+dentro da sessão (`WeakMap` no `previews`, o próprio item no `failures`).
+
+A leitura de `selected` tem duas etapas: **`_options` (a página corrente,
+transiente) responde primeiro; só o que ela não responde cai no cache.** Se o
+cache absorvesse toda opção normalizada, cinquenta buscas seguidas acumulariam
+cinquenta páginas de itens que ninguém mais vai ler.
+
+| fonte | quando |
+|---|---|
+| `select(option)` | **antes** de escrever no model — é o que faz o rótulo sobreviver a digitar na busca, paginar e reabrir |
+| a opção que está na página **e** no model | o form carregado do servidor, em que ninguém clicou e não há `resolve` |
+| `resolve` | só para valor que nem `_options` nem o cache respondem |
+| `modelFull` | não usa cache nem `resolve`: o model **é** o objeto, e o rótulo sai por `getProperty(value, pick.label)` |
+
+**A segunda fonte não estava no plano, e a falta dela foi medida montando o
+campo.** Sem ela, um form vindo do servidor (model preenchido, ninguém clicou,
+sem `resolve`) perdia o rótulo no instante em que a busca trocava a página — que
+é exatamente a falha que o cache existe para consertar. Ela **não** afrouxa o
+limite: só o que o model aponta entra, então o tamanho continua sendo o número de
+seleções, não o da lista.
+
+Fallback para valor sem rótulo: em modo remoto mostra o valor cru (`42`) e o
+`resolve` o troca um tique depois — sem isso há um piscar de vazio. Em modo
+**estático** continua `undefined`, isto é, o placeholder de hoje: mudar isso seria
+alteração semântica calada no caminho que 100% dos usuários atuais usam.
+
+`resolve` roda no `onMounted` (client-only) e quando o model muda por fora; uma
+vez por chave, e a chave entra no `Set` de tentadas **mesmo quando não resolveu**,
+senão cada re-render dispara de novo. O retorno alimenta **só** o cache, nunca a
+lista — um item resolvido no painel seria duplicata. Ele é client-only por
+`onMounted` e não por `useAsyncData`: a alternativa quebraria a regra estrutural
+de que nada em `src/` importa `#app`, e quebraria o campo montado fora de app
+Nuxt, que é o projeto `unit`.
+
+#### A carga em voo **não** entra no `pendingList`
+
+Três razões, em ordem de peso: (a) o `pendingList` protege a integridade do model
+no submit — o `RFile` registra porque o `Uploaded` ainda não existe, enquanto aqui
+o valor está no model desde o clique e o que está em voo é **rótulo**, que é
+aparência; (b) registrar faria o `RForm` esperar uma requisição de *paginação*
+disparada por scroll, e servidor lento viraria submit travado sem ganho de
+correção; (c) ninguém lê o rótulo — a `validation` recebe `{ value, form }`, o
+`rulesList` valida `model.value`, o `errorsBag` casa por `id`.
+
+Pela mesma divisa, **falha ao carregar não vira o `error` do campo**: o
+`errorsBag` é o único escritor daquele slot. O erro mora no rodapé quando há
+linhas, e no lugar da lista quando não há. Mesma decisão que o `RFile` já tomou.
+
+#### O painel deixou de ser o scroller
+
+```
+popover                            ← [--max-height:25rem] flex flex-col overflow-hidden
+  ui.list.container                ← a coluna: flex min-h-0 flex-1 flex-col
+    ui.list.search.container       ← shrink-0; deixou de ser sticky
+    ui.list.pinned                 ← shrink-0; max-h própria + overflow-auto
+    [role=listbox] ui.list.scroller ← min-h-0 flex-1 overflow-auto overscroll-contain
+      …linhas | <VirtualRows>
+      ui.list.sentinel             ← 1px, último filho
+    ui.list.footer                 ← shrink-0
+```
+
+`overflow-auto` → `overflow-hidden` no `popover` porque o arredondamento ainda
+precisa cortar o conteúdo. `max-h-full` no filho **não** funciona (resolve contra
+`height: auto` → `none`); a forma que funciona sem cravar `height` é o painel
+virar flex container. O `min-h-0` não é decoração: `min-height: auto` é o default
+de um flex item, e sem zerá-lo o bloco das linhas se recusa a encolher e estoura o
+painel em vez de rolar.
+
+**Nada mudou em `dropdownMiddleware.ts`** — o `apply` não escreve dimensão
+nenhuma, só `--width` e `--available-height`, e quem compõe a altura é o default
+do próprio Dropdown. O piso de 160px continua destravando o `flip()`.
+
+O `overscroll-contain` fecha o gesto: o Dropdown já trava o scroll do body
+enquanto aberto, então uma roda que chega ao fim da lista não tem para onde vazar.
+
+**O `divide-y` saiu** e virou `border-t border-(--rf-color-border)` na própria
+linha, com `option.first` zerando no índice 0 — nos **dois** modos, para trocar de
+estratégia não mudar a aparência. O motivo é a virtualização: o `divide-y` casa
+com filhos absolutos e a borda pinta, mas a janela começando no item 40 faz dele o
+primeiro filho, sem borda; um pixel de scroll e ele ganha uma. Borda que aparece e
+some. O token é obrigatório — o `BANNED` de `theme.test.ts` proíbe `border` sobre
+`contrast`, `background*` e `current`.
+
+Duas quebras assumidas, sem teste que as pegue: `ui.list.container` mudou de papel
+(era o `<ul>`, virou a coluna) e o `divide-y` sumiu.
+
+#### A próxima página é `IntersectionObserver`, não listener de scroll
+
+Sentinela de 1px, último filho do scroller nos dois modos, com
+`{ root: scrollerEl, rootMargin: "200px 0px" }`.
+
+**O `root` no scroller é o que torna a coluna flex requisito e não preferência**, e
+o teleporte deixa isso mais óbvio: o painel mora em `#teleports`,
+`position: fixed`, fora da `.RField` — com `root: null` o observer mede contra a
+viewport do documento e um painel cheio de itens nunca reporta interseção.
+
+A sentinela só existe depois que a primeira página assentou, então armar o
+observer pela **ref dela** é o que garante que a página 1 nunca dependa dele — o
+observer só reporta *mudança* de interseção. Trocar o termo zera tudo e dispara a
+página 1 direto, pelo mesmo motivo. Fechar o painel **não** reseta: reabrir não
+custa requisição.
+
+`typeof IntersectionObserver === "undefined"` (SSR, happy-dom) → sem paginação por
+scroll, mas a página 1 continua carregando pelo caminho direto. Mesma disciplina
+do `isFile` com `typeof File !== "undefined"`.
+
+**SSR:** o conteúdo do painel não existe no server (`everOpened` começa `false`),
+então lista, observer e `VirtualRows` nunca são criados lá, e um `RSelect` remoto
+**não faz requisição na renderização do servidor**.
+
+#### A seção do selecionado é rendering, não estado
+
+Um bloco acima do scroller com as linhas do que está no model, alimentado pelo
+mesmo `selected` que o cache já computa — **nenhum estado novo**, nenhum segundo
+Map, nenhuma ordenação a manter: o model é a verdade, e um item removido sai
+sozinho.
+
+**Fora do scroller, e não no topo dele.** Duas razões, e a segunda decide: no topo
+ela sumiria na primeira rolada, que é exatamente quando ela serve; e dentro do
+scroller, com virtualização, as linhas fixas ficariam acima do bloco de
+`totalSize` e o `useVirtualizer` precisaria de `scrollMargin` para descontá-las —
+uma variável a mais num cálculo que happy-dom não testa e que só quebra em tela.
+
+A lista de baixo **exclui** o que a seção mostra, por `keyOf`, senão o item que
+está na página corrente *e* selecionado apareceria duas vezes. A busca **não**
+filtra a seção — ela existe para o escolhido não sumir, e um termo que não casa o
+rótulo o esconderia, que é a falha exata que isto conserta. O custo é uma segunda
+barra de rolagem, limitada pela `max-h` de `ui.list.pinned`.
+
+**Só em modo remoto.** Com `options` estática o escolhido já está na lista e sempre
+esteve; subi-lo reordenaria a lista de 100% dos usuários de hoje, calado. Mesma
+regra do `resolve`, e pelo mesmo motivo.
+
+A linha é **a mesma linha**: mesmo `ui.list.option.*`, mesmo slot `default` com
+`list: true`, mesmo `select(option)` — em `multiple` clicar desmarca e a linha
+deixa a seção. Não há terceiro valor de `list` a inventar. O `empty` renderiza
+**abaixo** da seção, nunca no lugar dela: "nada encontrado" é uma afirmação sobre
+a busca, e o que está escolhido continua escolhido.
+
+O bloco leva `role="group"` e o scroller `role="listbox"`; é o que separa as duas
+seções para um seletor, e é como os testes as distinguem.
+
+#### `components/internal/` é uma terceira categoria
+
+`VirtualRows.vue` não é campo nem util: não passa por `useField`/`useUtil`, não
+tem `defaults`, não é registrado pelo `addComponentsDir`. O `RSelect` o carrega
+por `defineAsyncComponent`, e isso é **obrigação, não estilo** — o `useVirtualizer`
+é composable, registra `watch`/`onMounted` e precisa da instância corrente, que
+não sobrevive a um `await import()` no meio do setup. É o mesmo modo de falha que
+o `useUtil` já documenta. O `defineAsyncComponent` é a fronteira de *setup* que o
+composable exige e a fronteira de *chunk* que o bundle exige, de uma vez; o
+`@tanstack/vue-virtual` é importado **estaticamente** lá dentro, então viaja no
+chunk assíncrono, uma vez.
+
+Medido no `dev:build`: `VirtualRows.vue` sai com `isDynamicEntry: true` e
+`measureElement` não aparece no chunk de entrada.
+
+**Consequência que não pode ser esquecida:** `test/unit/theme.test.ts` varre raízes
+**planas e não recursivas** — `components/internal` teve de entrar na lista, senão
+o arquivo novo, que é justamente o que carrega as classes de layout mais frágeis,
+ficaria sem guarda nenhuma.
+
+`VIRTUAL_THRESHOLD = 100` e `overscan: 8` são constantes: quantas linhas o DOM
+aguenta não é conhecimento do app. `rowHeight` vira `defaults` (48), derivado do
+`ui.list.option.container` e por isso morando ao lado dele; ele só governa a barra
+antes da primeira medição, e o `measureElement` remede de verdade — as linhas têm
+slot livre, então altura fixa está errada por construção.
+
+A troca é **monotônica dentro de uma abertura**: uma vez virtualizada a lista
+continua assim até fechar, porque alternar a estratégia a cada tecla é jitter de
+scroll e de foco.
+
+O `VirtualRows` é **genérico sobre o item** e resolve o índice num `computed`, e
+as duas coisas existem pelo mesmo motivo: sem elas o `RSelect` precisaria de um
+`as Item` no `<template>`, que é o que a convenção da casa proíbe.
+
+`@tanstack/vue-virtual` está em `dependencies`, e é o precedente do `@nuxt/icon`:
+o caminho comum não pode exigir instalação manual. O import dinâmico corta o
+**bundle**, não o `node_modules`.
+
+#### O gatilho ganhou `role="combobox"`
+
+`role="combobox" aria-haspopup="listbox" :aria-expanded="open"` no wrapper da
+referência, e `<li>` virou `<div role="option">` — no modo virtualizado a linha
+mora dentro do bloco de altura `totalSize`, e `div` filho de `ul` é HTML
+inválido; assim os dois modos têm estrutura idêntica.
+
+Por tabela, o helper `open()` dos testes deixou de ser `wrapper.findAll("div")[1]`,
+que dependia do índice no DOM, e virou
+`wrapper.get('[aria-haspopup="listbox"]')`. Acessibilidade de graça, seletor
+estável.
 
 ### `addComponentsDir` não aninha
 
