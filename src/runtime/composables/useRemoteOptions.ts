@@ -16,6 +16,8 @@ export type RemoteOptions = {
     message: Ref<string>;
     /** Não há mais página: array vazio, ou página que não fez a lista crescer. */
     exhausted: Ref<boolean>;
+    /** A última página que assentou; `0` antes da primeira. É o que arma a sentinela. */
+    page: Ref<number>;
     /** O rótulo do que foi escolhido ou resolvido — nunca a lista. */
     pinned: Ref<Map<string, OptionItem>>;
     /** Semeia o cache antes de o valor ir ao model. */
@@ -76,7 +78,8 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
     // sem isso cada re-render dispararia a requisição de novo.
     const tried = new Set<string>();
 
-    let page = 0;
+    const page = ref(0);
+
     let token = 0;
     let controller: AbortController | undefined;
 
@@ -119,7 +122,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
         status.value = more ? "loadingMore" : "loading";
         message.value = "";
 
-        const wanted = page + 1;
+        const wanted = page.value + 1;
 
         try {
             const result = await fn({
@@ -149,7 +152,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
             const added = fresh.filter((item) => !seen.has(keyOf(item.value)));
 
             items.value = more ? [...items.value, ...added] : fresh;
-            page = wanted;
+            page.value = wanted;
 
             // (c) página que não faz a lista crescer também encerra: é a guarda
             // contra a fn que ignora `page` e devolve sempre o mesmo. Sem ela o
@@ -175,7 +178,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
     };
 
     const first = () => {
-        if (page > 0 || status.value === "loading") {
+        if (page.value > 0 || status.value === "loading") {
             return;
         }
 
@@ -183,7 +186,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
     };
 
     const next = () => {
-        if (page === 0 || status.value === "error") {
+        if (page.value === 0 || status.value === "error") {
             return;
         }
 
@@ -197,13 +200,13 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
 
         status.value = "idle";
 
-        void load(page > 0);
+        void load(page.value > 0);
     };
 
     const reset = () => {
         abort();
         ++token;
-        page = 0;
+        page.value = 0;
         items.value = [];
         exhausted.value = false;
         message.value = "";
@@ -269,6 +272,7 @@ export default function useRemoteOptions(config: Config): RemoteOptions {
         status,
         message,
         exhausted,
+        page,
         pinned,
         remember,
         first,

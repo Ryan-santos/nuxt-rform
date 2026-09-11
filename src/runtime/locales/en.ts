@@ -16,7 +16,9 @@ const en: Messages = {
             loadingMore: "Loading more…",
             empty: "Nothing found",
             failed: "Could not load the options",
-            retry: "Try again"
+            retry: "Try again",
+            clear: "Clear",
+            count: "{n} item | {n} items"
         },
         file: {
             placeholder: "Drag or click here to add:",

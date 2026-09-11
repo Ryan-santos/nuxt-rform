@@ -35,13 +35,24 @@ type Ctx = { search: string; page: number };
 
 type Finder = { findAll: (s: string) => { text: () => string }[] };
 
-/** As linhas da lista de baixo — o scroller. */
+/** As linhas do painel, na ordem em que aparecem. */
 const rows = (wrapper: Finder) =>
     wrapper.findAll('[role="listbox"] [role="option"]').map((row) => row.text());
 
-/** As linhas fixas do selecionado, na seção acima do scroller. */
-const pinned = (wrapper: Finder) =>
-    wrapper.findAll('[role="group"] [role="option"]').map((row) => row.text());
+type Clicker = {
+    findAll: (s: string) => { text: () => string; trigger: (e: string) => Promise<void> }[];
+};
+
+/** Clica na linha com este rótulo. */
+const click = async (wrapper: Clicker, label: string) => {
+    const row = wrapper.findAll('[role="listbox"] [role="option"]').find((r) => r.text() === label);
+
+    if (!row) {
+        throw new Error(`row not found: ${label}`);
+    }
+
+    await row.trigger("click");
+};
 
 /**
  * `options` como função: quem busca e pagina é o app, e o módulo é dono do ciclo
@@ -160,8 +171,8 @@ describe("RSelect com options em função", () => {
         await wrapper.find("input[type=search]").setValue("outro");
         await settle(wrapper);
 
-        expect(rows(wrapper)).toEqual(["Outro"]);
-        // O rótulo do campo continua sendo o da Ana, que saiu da lista.
+        // A página já não traz a Ana: ela sobe ao topo, e o campo mantém o rótulo.
+        expect(rows(wrapper)).toEqual(["Ana", "Outro"]);
         expect(wrapper.get(".RSelect").text()).toContain("Ana");
     });
 
@@ -343,23 +354,23 @@ describe("a prop resolve do RSelect", () => {
     });
 });
 /**
- * A seção do selecionado sobe para fora do scroller: ela existe para o escolhido
- * não sumir **enquanto se pagina**, e no topo do scroller ela sumiria na primeira
- * rolada — que é exatamente quando ela serve.
+ * O escolhido sobe ao topo da lista, e a lista só é recomposta no `open` e
+ * quando uma página assenta sem trazê-lo — nunca no clique. É o que faz uma linha
+ * não mudar de lugar sob o cursor.
  */
-describe("a seção do selecionado do RSelect", () => {
-    it("existe em modo remoto e não em estático", async () => {
+describe("o escolhido no topo da lista do RSelect", () => {
+    it("sobe em modo remoto e fica onde está em estático", async () => {
         const remoto = await mountSuspended(RSelect, {
-            props: { options: () => users, modelValue: 1, pick } as never
+            props: { options: () => users, modelValue: 2, pick } as never
         });
 
         await open(remoto);
         await settle(remoto);
 
-        expect(pinned(remoto)).toEqual(["Ana"]);
+        expect(rows(remoto)).toEqual(["Bruno", "Ana"]);
 
         const estatico = await mountSuspended(RSelect, {
-            props: { options: users, modelValue: 1, pick } as never
+            props: { options: users, modelValue: 2, pick } as never
         });
 
         await open(estatico);
@@ -367,23 +378,22 @@ describe("a seção do selecionado do RSelect", () => {
 
         // Em estático o escolhido já está na lista e sempre esteve; subi-lo
         // reordenaria a lista de todo mundo, calado.
-        expect(pinned(estatico)).toEqual([]);
         expect(rows(estatico)).toEqual(["Ana", "Bruno"]);
     });
 
-    it("o item selecionado que está na página corrente aparece uma vez só", async () => {
+    it("o item que está na página corrente aparece uma vez só", async () => {
         const wrapper = await mountSuspended(RSelect, {
-            props: { options: () => users, modelValue: 1, pick } as never
+            props: { options: () => users, modelValue: 2, pick } as never
         });
 
         await open(wrapper);
         await settle(wrapper);
 
-        expect(pinned(wrapper)).toEqual(["Ana"]);
-        expect(rows(wrapper)).toEqual(["Bruno"]);
+        expect(rows(wrapper)).toEqual(["Bruno", "Ana"]);
+        expect(wrapper.findAll('[aria-selected="true"]')).toHaveLength(1);
     });
 
-    it("um termo que não casa o rótulo não tira o escolhido da seção", async () => {
+    it("um termo que não casa o rótulo não tira o escolhido da lista", async () => {
         const options = vi.fn(({ search }: Ctx) => (search ? [{ id: 9, name: "Outro" }] : users));
 
         const wrapper = await mountSuspended(RSelect, {
@@ -396,29 +406,102 @@ describe("a seção do selecionado do RSelect", () => {
         await wrapper.find("input[type=search]").setValue("zzz");
         await settle(wrapper);
 
-        expect(pinned(wrapper)).toEqual(["Ana"]);
-        expect(rows(wrapper)).toEqual(["Outro"]);
+        expect(rows(wrapper)).toEqual(["Ana", "Outro"]);
     });
 
-    it("clicar na linha fixa desmarca em multiple, e ela sai", async () => {
+    it("marcar durante a sessão não move a linha; reabrir é o que a sobe", async () => {
         const wrapper = await mountSuspended(RSelect, {
-            props: { options: () => users, multiple: true, modelValue: [1], pick } as never
+            props: { options: () => users, multiple: true, modelValue: [], pick } as never
         });
 
         await open(wrapper);
         await settle(wrapper);
 
-        expect(pinned(wrapper)).toEqual(["Ana"]);
-
-        await wrapper.findAll('[role="group"] [role="option"]')[0]!.trigger("click");
+        await click(wrapper, "Bruno");
         await settle(wrapper);
 
-        const emitted = wrapper.emitted("update:modelValue");
+        // Marcado, e no mesmo lugar.
+        expect(rows(wrapper)).toEqual(["Ana", "Bruno"]);
 
-        expect(emitted?.at(-1)?.[0]).toEqual([]);
+        await open(wrapper);
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Bruno", "Ana"]);
     });
 
-    it("o empty renderiza abaixo da seção, nunca no lugar dela", async () => {
+    it("desmarcar uma linha do topo a deixa lá até fechar — nada muda sob o cursor", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => users, multiple: true, modelValue: [2], pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Bruno", "Ana"]);
+
+        await click(wrapper, "Bruno");
+        await settle(wrapper);
+
+        expect(wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toEqual([]);
+        expect(rows(wrapper)).toEqual(["Bruno", "Ana"]);
+        expect(wrapper.findAll('[aria-selected="true"]')).toHaveLength(0);
+
+        await open(wrapper);
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Ana", "Bruno"]);
+    });
+
+    it("o marcado durante a sessão sobe quando a página seguinte não o traz", async () => {
+        const options = vi.fn(({ search }: Ctx) => (search ? [{ id: 9, name: "Outro" }] : users));
+
+        const wrapper = await mountSuspended(RSelect, {
+            props: {
+                options,
+                search: true,
+                debounce: 0,
+                multiple: true,
+                modelValue: [],
+                pick
+            } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        await click(wrapper, "Bruno");
+        await settle(wrapper);
+
+        await wrapper.find("input[type=search]").setValue("zzz");
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Bruno", "Outro"]);
+    });
+
+    it("a página que volta a trazer o item não o duplica", async () => {
+        const options = vi.fn(({ search }: Ctx) => (search ? [{ id: 9, name: "Outro" }] : users));
+
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options, search: true, debounce: 0, modelValue: 1, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        await wrapper.find("input[type=search]").setValue("zzz");
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Ana", "Outro"]);
+
+        await wrapper.find("input[type=search]").setValue("");
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Ana", "Bruno"]);
+    });
+
+    it("o empty renderiza abaixo do topo, nunca no lugar dele", async () => {
         const options = vi.fn(({ search }: Ctx) => (search ? [] : users));
 
         const wrapper = await mountSuspended(RSelect, {
@@ -431,23 +514,20 @@ describe("a seção do selecionado do RSelect", () => {
         await wrapper.find("input[type=search]").setValue("zzz");
         await settle(wrapper);
 
-        expect(pinned(wrapper)).toEqual(["Ana"]);
+        expect(rows(wrapper)).toEqual(["Ana"]);
         expect(wrapper.text()).toContain("Nada encontrado");
     });
 
-    it("a seção tem uma max-h própria — duas caixas roláveis não se espremem", async () => {
+    it("não é 'vazio' quando tudo o que a página trouxe já está no topo", async () => {
         const wrapper = await mountSuspended(RSelect, {
-            props: { options: () => users, modelValue: 1, pick } as never
+            props: { options: () => users, multiple: true, modelValue: [1, 2], pick } as never
         });
 
         await open(wrapper);
         await settle(wrapper);
 
-        const classes = wrapper.get('[role="group"]').classes();
-
-        expect(classes).toContain("max-h-40");
-        expect(classes).toContain("overflow-auto");
-        expect(classes).toContain("shrink-0");
+        expect(rows(wrapper)).toEqual(["Ana", "Bruno"]);
+        expect(wrapper.text()).not.toContain("Nada encontrado");
     });
 });
 
@@ -472,8 +552,8 @@ describe("o cache de rótulos do RSelect sem resolve", () => {
         await wrapper.find("input[type=search]").setValue("zzz");
         await settle(wrapper);
 
-        // A Ana já não está na lista, e o rótulo continua.
-        expect(rows(wrapper)).toEqual(["Outro"]);
+        // A página já não traz a Ana; o rótulo dela é o do cache — no topo e no campo.
+        expect(rows(wrapper)).toEqual(["Ana", "Outro"]);
         expect(wrapper.get(".RSelect").text()).toContain("Ana");
     });
 

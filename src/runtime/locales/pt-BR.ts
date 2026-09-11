@@ -17,7 +17,9 @@ export default {
             loadingMore: "Carregando mais…",
             empty: "Nada encontrado",
             failed: "Não foi possível carregar as opções",
-            retry: "Tentar de novo"
+            retry: "Tentar de novo",
+            clear: "Limpar",
+            count: "{n} item | {n} itens"
         },
         file: {
             placeholder: "Arraste ou clique aqui para adicionar:",

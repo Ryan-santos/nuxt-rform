@@ -1561,12 +1561,18 @@ linhas, e no lugar da lista quando não há. Mesma decisão que o `RFile` já to
 popover                            ← [--max-height:25rem] flex flex-col overflow-hidden
   ui.list.container                ← a coluna: flex min-h-0 flex-1 flex-col
     ui.list.search.container       ← shrink-0; deixou de ser sticky
-    ui.list.pinned                 ← shrink-0; max-h própria + overflow-auto
     [role=listbox] ui.list.scroller ← min-h-0 flex-1 overflow-auto overscroll-contain
-      …linhas | <VirtualRows>
-      ui.list.sentinel             ← 1px, último filho
-    ui.list.footer                 ← shrink-0
+      …o topo + a página | <VirtualRows>
+      ui.list.sentinel             ← 1px, último filho; só enquanto há página seguinte
+    ui.list.state                  ← carregando / vazio / erro sem página — abaixo do scroller
+    ui.list.footer.container       ← shrink-0
+      ui.list.footer.status        ← <Transition>: página seguinte em voo, erro com retry
+      ui.list.footer.bar           ← o total de linhas e o limpar
 ```
+
+Os estados moram **abaixo** do scroller, e não no lugar dele: com o escolhido no
+topo da lista, "carregando" e "nada encontrado" são afirmações sobre a página, e
+o que está escolhido continua na tela enquanto elas aparecem.
 
 `overflow-auto` → `overflow-hidden` no `popover` porque o arredondamento ainda
 precisa cortar o conteúdo. `max-h-full` no filho **não** funciona (resolve contra
@@ -1591,7 +1597,9 @@ some. O token é obrigatório — o `BANNED` de `theme.test.ts` proíbe `border`
 `contrast`, `background*` e `current`.
 
 Duas quebras assumidas, sem teste que as pegue: `ui.list.container` mudou de papel
-(era o `<ul>`, virou a coluna) e o `divide-y` sumiu.
+(era o `<ul>`, virou a coluna) e o `divide-y` sumiu. `ui.list.footer` virou grupo
+(`container`/`status`/`bar`/`count`/`clear`/`transition`) e `ui.list.pinned`
+deixou de existir, os dois ainda dentro deste branch.
 
 #### A próxima página é `IntersectionObserver`, não listener de scroll
 
@@ -1603,11 +1611,21 @@ o teleporte deixa isso mais óbvio: o painel mora em `#teleports`,
 `position: fixed`, fora da `.RField` — com `root: null` o observer mede contra a
 viewport do documento e um painel cheio de itens nunca reporta interseção.
 
-A sentinela só existe depois que a primeira página assentou, então armar o
-observer pela **ref dela** é o que garante que a página 1 nunca dependa dele — o
-observer só reporta *mudança* de interseção. Trocar o termo zera tudo e dispara a
-página 1 direto, pelo mesmo motivo. Fechar o painel **não** reseta: reabrir não
-custa requisição.
+A sentinela só existe enquanto **há página seguinte a pedir** (`hasMore`:
+`remote.page > 0`, não exausto, sem erro), então armar o observer pela **ref
+dela** é o que garante que a página 1 nunca dependa dele — o observer só reporta
+*mudança* de interseção. Por isso a composable expõe `page` como ref: com o
+escolhido no topo, o scroller já existe antes de a página 1 chegar, e uma
+sentinela ligada à existência do scroller seria observada cedo demais — visível,
+sem mudar, e a página 2 nunca viria. Trocar o termo zera tudo e dispara a página
+1 direto, pelo mesmo motivo. Fechar o painel **não** reseta: reabrir não custa
+requisição.
+
+**Depois de uma página assentar, a sentinela é reobservada** (`unobserve` +
+`observe`, num `watch(_options)` de `flush: "post"`). Uma página menor que o
+painel deixa a sentinela visível, e o observer não reporta o que não mudou;
+reobservar refaz a leitura inicial. O `next()` que sobrar bate na guarda (a) da
+composable.
 
 `typeof IntersectionObserver === "undefined"` (SSR, happy-dom) → sem paginação por
 scroll, mas a página 1 continua carregando pelo caminho direto. Mesma disciplina
@@ -1617,37 +1635,58 @@ do `isFile` com `typeof File !== "undefined"`.
 então lista, observer e `VirtualRows` nunca são criados lá, e um `RSelect` remoto
 **não faz requisição na renderização do servidor**.
 
-#### A seção do selecionado é rendering, não estado
+#### O escolhido no topo é estado, recomposto em dois momentos
 
-Um bloco acima do scroller com as linhas do que está no model, alimentado pelo
-mesmo `selected` que o cache já computa — **nenhum estado novo**, nenhum segundo
-Map, nenhuma ordenação a manter: o model é a verdade, e um item removido sai
-sozinho.
+O que está no model vem como as primeiras linhas do **próprio scroller**, e a
+página vem abaixo, sem o que o topo já mostra (por `keyOf`). É o `lifted` do
+`Select.vue`: um `shallowRef` com as **entradas do model**, resolvidas pelo
+mesmo `itemFor` do campo — o rótulo chega com o cache, e o `resolve` que volta
+um tique depois troca o valor cru sem nada ali saber.
 
-**Fora do scroller, e não no topo dele.** Duas razões, e a segunda decide: no topo
-ela sumiria na primeira rolada, que é exatamente quando ela serve; e dentro do
-scroller, com virtualização, as linhas fixas ficariam acima do bloco de
-`totalSize` e o `useVirtualizer` precisaria de `scrollMargin` para descontá-las —
-uma variável a mais num cálculo que happy-dom não testa e que só quebra em tela.
+**Isso já foi uma seção fixa fora do scroller**, com `role="group"`, `max-h`
+própria e a segunda barra de rolagem — computada do `selected`, sem estado. Saiu
+por ser problema visual, e a troca de lugar mudou a natureza: no scroller, uma
+linha que sobe e desce a cada clique é jitter sob o cursor. Daí ser **estado**, e
+a regra ser "nada muda de lugar enquanto o painel está aberto". A lista só é
+recomposta em dois momentos:
 
-A lista de baixo **exclui** o que a seção mostra, por `keyOf`, senão o item que
-está na página corrente *e* selecionado apareceria duas vezes. A busca **não**
-filtra a seção — ela existe para o escolhido não sumir, e um termo que não casa o
-rótulo o esconderia, que é a falha exata que isto conserta. O custo é uma segunda
-barra de rolagem, limitada pela `max-h` de `ui.list.pinned`.
+- **no `open`**: `lifted = modelValues` — é a única hora em que uma linha muda de
+  lugar, e o painel estava fechado;
+- **quando uma página assenta** sem trazer algo que está no model: o que falta é
+  **acrescentado** ao topo. Não roda com a página 1 em voo (`status === "loading"`)
+  — ali a lista está vazia por definição, e tudo subiria antes de a resposta
+  dizer o que trouxe. Erro não muda `items`, então não dispara.
+
+Consequências, todas medidas em `test/nuxt/selectRemote.test.ts`: marcar um item
+no meio da lista não o move; desmarcar um do topo não o derruba (fica lá, com
+`aria-selected="false"`); a busca que volta a trazê-lo não o duplica; fechar e
+reabrir é o que reorganiza.
 
 **Só em modo remoto.** Com `options` estática o escolhido já está na lista e sempre
 esteve; subi-lo reordenaria a lista de 100% dos usuários de hoje, calado. Mesma
 regra do `resolve`, e pelo mesmo motivo.
 
 A linha é **a mesma linha**: mesmo `ui.list.option.*`, mesmo slot `default` com
-`list: true`, mesmo `select(option)` — em `multiple` clicar desmarca e a linha
-deixa a seção. Não há terceiro valor de `list` a inventar. O `empty` renderiza
-**abaixo** da seção, nunca no lugar dela: "nada encontrado" é uma afirmação sobre
-a busca, e o que está escolhido continua escolhido.
+`list: true`, mesmo `select(option)`. Não há terceiro valor de `list` a inventar.
+Em remoto, "vazio" passou a ser o `status === "empty"` da composable, e não
+`rows.length === 0`: com tudo o que a página trouxe já no topo, a lista de baixo
+fica vazia sem nada ter faltado.
 
-O bloco leva `role="group"` e o scroller `role="listbox"`; é o que separa as duas
-seções para um seletor, e é como os testes as distinguem.
+#### O rodapé e o X: dois lugares, um `clear`
+
+Todo painel termina em `ui.list.footer`: a faixa de estado (`status`, dentro de
+um `<Transition>` com `v-bind="ui.list.footer.transition"`, no molde do
+`RUtilsLoading`) e a barra com o total de linhas (`rows.length` — em remoto, o
+que já carregou) e o botão que esvazia a seleção. O mesmo `clear` é o X do campo,
+um `<button>` antes do chevron com `@click.stop` (senão o clique abre o painel),
+`v-if="hasSelection && !props.disabled"`.
+
+`clear` escreve `[]` em `multiple` e `null` no resto — **nunca o `default`**, que
+é o que um X não quer de volta. O slot `footer` substitui o rodapé inteiro e
+recebe `{ status?, retry, count, clear }`.
+
+O plural do total é o `{n} item | {n} itens` do pack, pelo `withParams` — que
+saiu do `File.vue` para `#rform/utils` por ter ganhado o segundo call site.
 
 #### `components/internal/` é uma terceira categoria
 

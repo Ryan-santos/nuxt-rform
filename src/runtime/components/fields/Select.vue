@@ -56,6 +56,17 @@
                         <slot name="trailing" />
                     </div>
 
+                    <button
+                        v-if="hasSelection && !props.disabled"
+                        type="button"
+                        :aria-label="tr(props.text?.clear)"
+                        :title="tr(props.text?.clear)"
+                        :class="props.ui?.group?.clear"
+                        @click.stop="clear"
+                    >
+                        <Icon :name="icon('remove')" />
+                    </button>
+
                     <Icon
                         :name="icon('select')"
                         :class="props.ui?.group?.icon"
@@ -84,67 +95,7 @@
                 </div>
                 <div :class="props.ui?.list?.container">
                     <div
-                        v-if="pinnedRows.length > 0"
-                        role="group"
-                        :class="props.ui?.list?.pinned"
-                    >
-                        <div
-                            v-for="(option, key) in pinnedRows"
-                            :key
-                            role="option"
-                            aria-selected="true"
-                            :class="[
-                                props.ui?.list?.option?.container,
-                                key === 0 ? props.ui?.list?.option?.first : undefined,
-                                props.ui?.list?.option?.selected
-                            ]"
-                            @click="select(option)"
-                        >
-                            <slot
-                                :selected="rowSlot(option)"
-                                :list="true"
-                            >
-                                <p :class="props.ui?.list?.option?.text">
-                                    {{ option.label }}
-                                </p>
-                            </slot>
-                        </div>
-                    </div>
-
-                    <div
-                        v-if="status === 'loading'"
-                        :class="props.ui?.list?.state"
-                    >
-                        <Icon :name="icon('loading')" />
-                        {{ tr(props.text?.loading) }}
-                    </div>
-
-                    <div
-                        v-else-if="status === 'error' && rows.length === 0"
-                        :class="props.ui?.list?.state"
-                    >
-                        <Icon :name="icon('alert')" />
-                        {{ errorText }}
-                        <button
-                            type="button"
-                            :class="props.ui?.list?.retry"
-                            @click.stop="retry"
-                        >
-                            {{ tr(props.text?.retry) }}
-                        </button>
-                    </div>
-
-                    <slot
-                        v-else-if="isEmpty"
-                        name="empty"
-                    >
-                        <div :class="props.ui?.list?.state">
-                            {{ tr(props.text?.empty) }}
-                        </div>
-                    </slot>
-
-                    <div
-                        v-else
+                        v-if="rows.length > 0"
                         ref="scroller"
                         role="listbox"
                         :class="props.ui?.list?.scroller"
@@ -206,34 +157,88 @@
                         </template>
 
                         <div
+                            v-if="hasMore"
                             ref="sentinel"
                             aria-hidden="true"
                             :class="props.ui?.list?.sentinel"
                         />
                     </div>
 
+                    <div
+                        v-if="status === 'loading'"
+                        :class="props.ui?.list?.state"
+                    >
+                        <Icon :name="icon('loading')" />
+                        {{ tr(props.text?.loading) }}
+                    </div>
+
+                    <div
+                        v-else-if="status === 'error' && !hasPage"
+                        :class="props.ui?.list?.state"
+                    >
+                        <Icon :name="icon('alert')" />
+                        {{ errorText }}
+                        <button
+                            type="button"
+                            :class="props.ui?.list?.retry"
+                            @click.stop="retry"
+                        >
+                            {{ tr(props.text?.retry) }}
+                        </button>
+                    </div>
+
                     <slot
-                        v-if="footerStatus"
+                        v-else-if="isEmpty"
+                        name="empty"
+                    >
+                        <div :class="props.ui?.list?.state">
+                            {{ tr(props.text?.empty) }}
+                        </div>
+                    </slot>
+
+                    <slot
                         name="footer"
                         :status="footerStatus"
                         :retry="retry"
+                        :count="rows.length"
+                        :clear="clear"
                     >
-                        <div :class="props.ui?.list?.footer">
-                            <template v-if="footerStatus === 'loadingMore'">
-                                <Icon :name="icon('loading')" />
-                                {{ tr(props.text?.loadingMore) }}
-                            </template>
-                            <template v-else>
-                                <Icon :name="icon('alert')" />
-                                {{ errorText }}
+                        <div :class="props.ui?.list?.footer?.container">
+                            <Transition v-bind="props.ui?.list?.footer?.transition">
+                                <div
+                                    v-if="footerStatus"
+                                    :class="props.ui?.list?.footer?.status"
+                                >
+                                    <template v-if="footerStatus === 'loadingMore'">
+                                        <Icon :name="icon('loading')" />
+                                        {{ tr(props.text?.loadingMore) }}
+                                    </template>
+                                    <template v-else>
+                                        <Icon :name="icon('alert')" />
+                                        {{ errorText }}
+                                        <button
+                                            type="button"
+                                            :class="props.ui?.list?.retry"
+                                            @click.stop="retry"
+                                        >
+                                            {{ tr(props.text?.retry) }}
+                                        </button>
+                                    </template>
+                                </div>
+                            </Transition>
+                            <div :class="props.ui?.list?.footer?.bar">
+                                <span :class="props.ui?.list?.footer?.count">
+                                    {{ countText }}
+                                </span>
                                 <button
                                     type="button"
-                                    :class="props.ui?.list?.retry"
-                                    @click.stop="retry"
+                                    :disabled="!hasSelection || props.disabled"
+                                    :class="props.ui?.list?.footer?.clear"
+                                    @click.stop="clear"
                                 >
-                                    {{ tr(props.text?.retry) }}
+                                    {{ tr(props.text?.clear) }}
                                 </button>
-                            </template>
+                            </div>
                         </div>
                     </slot>
                 </div>
@@ -254,7 +259,11 @@
      *
      * `@search` reporta o termo digitado e transfere o filtro para quem escuta —
      * é o que permite buscar no servidor em vez de na lista já carregada. Ele
-     * liga o campo de busca sozinho.
+     * liga o campo de busca sozinho. `options` em função vai além: o campo pagina,
+     * sobe o escolhido ao topo da lista e guarda o rótulo dele.
+     *
+     * O painel termina num rodapé com o total de linhas e um botão que esvazia a
+     * seleção; o mesmo X aparece no campo enquanto há algo escolhido.
      *
      * @example <RSelect name="uf" :options="ufs" multiple search />
      * @example <RSelect name="form" :options :loading @search="buscar" />
@@ -265,6 +274,7 @@
         onMounted,
         onUnmounted,
         ref,
+        shallowRef,
         useTemplateRef,
         watch
     } from "vue";
@@ -288,7 +298,8 @@
         getProperty,
         icon,
         keyOf,
-        normalizeOptions
+        normalizeOptions,
+        withParams
     } from "#rform/utils";
 
     import { injectFormRoot } from "../../composables/formRoot";
@@ -386,6 +397,11 @@
                     `,
                     text: "truncate"
                 },
+                // O X do campo: só com seleção, e nunca com `disabled`.
+                clear: `
+                    flex cursor-pointer p-3 pr-0 opacity-50 transition-opacity duration-300
+                    hover:opacity-100
+                `,
                 icon: "m-3 ml-0"
             },
             list: {
@@ -398,9 +414,6 @@
                     `
                 },
                 container: "flex min-h-0 flex-1 flex-col",
-                // A segunda caixa rolável: com `multiple` e dez seleções ela para de
-                // crescer e rola por dentro, em vez de espremer a lista de baixo.
-                pinned: "max-h-40 shrink-0 overflow-auto overscroll-contain",
                 scroller: "min-h-0 flex-1 overflow-auto overscroll-contain",
                 sentinel: "h-px w-full",
                 option: {
@@ -417,10 +430,29 @@
                     flex flex-row items-center justify-center gap-2 p-3 text-sm
                     opacity-60
                 `,
-                footer: `
-                    flex shrink-0 flex-row items-center justify-center gap-2 border-t
-                    border-(--rf-color-border) p-3 text-sm
-                `,
+                footer: {
+                    container: "flex shrink-0 flex-col border-t border-(--rf-color-border) text-sm",
+                    // A faixa de estado: a próxima página em voo, ou o erro com retry.
+                    status: `
+                        flex flex-row items-center justify-center gap-2 border-b border-(--rf-color-border)
+                        p-3
+                    `,
+                    bar: "flex flex-row items-center justify-between gap-2 px-3 py-2",
+                    count: "opacity-60",
+                    clear: `
+                        cursor-pointer underline underline-offset-2
+                        disabled:cursor-default disabled:opacity-40
+                    `,
+                    transition: {
+                        name: "",
+                        enterActiveClass: "transition-opacity duration-300",
+                        enterToClass: "",
+                        enterFromClass: "opacity-0",
+                        leaveActiveClass: "transition-opacity duration-300",
+                        leaveToClass: "opacity-0",
+                        leaveFromClass: ""
+                    }
+                },
                 retry: "cursor-pointer underline underline-offset-2"
             },
             Utils: {
@@ -447,7 +479,9 @@
             loadingMore: "loadingMore",
             empty: "empty",
             failed: "failed",
-            retry: "retry"
+            retry: "retry",
+            clear: "clear",
+            count: "count"
         }
     });
 
@@ -573,8 +607,13 @@
         trailing(): void;
         /** No lugar da lista, quando não há nada a mostrar. */
         empty(): void;
-        /** A faixa abaixo da lista: a próxima página em voo, ou o erro com retry. */
-        footer(props: { status: ListStatus; retry: () => void }): void;
+        /** O rodapé inteiro: a faixa de estado, o total de linhas e o limpar. */
+        footer(props: {
+            status?: ListStatus;
+            retry: () => void;
+            count: number;
+            clear: () => void;
+        }): void;
     }>();
 
     const { model, props, tr } = await useField(_props as unknown as InternalProps);
@@ -840,64 +879,100 @@
     const sentinel = useTemplateRef<HTMLElement>("sentinel");
 
     /**
-     * A seção do selecionado, acima do scroller. **Só em modo remoto**: com
-     * `options` estática o escolhido já está na lista e sempre esteve, e subi-lo
-     * reordenaria a lista de todo mundo, calado.
+     * As entradas do model que subiram ao topo da lista. É estado, e não um
+     * computed do `selected`, de propósito: a lista só é recomposta no `open` e
+     * quando uma página assenta sem trazer o escolhido — nunca no clique. Uma
+     * linha não muda de lugar sob o cursor: desmarcar em `multiple` a deixa onde
+     * está, e a página que volta a trazê-la não a duplica.
      *
-     * Não guarda estado — é o mesmo `selected` que o cache já computa —, então a
-     * ordem é a do model e um item removido sai daqui sozinho.
+     * **Só em modo remoto**: com `options` estática o escolhido já está na lista e
+     * sempre esteve, e subi-lo reordenaria a lista de todo mundo, calado.
      */
-    const pinnedRows = computed<Item[]>(() => {
-        if (!remoteMode.value) {
-            return [];
-        }
+    const lifted = shallowRef<unknown[]>([]);
 
-        const current = selected.value;
+    const liftedKeys = computed(
+        () => new Set(lifted.value.map((entry) => keyOf(valueOfEntry(entry))))
+    );
 
-        if (Array.isArray(current)) {
-            return current;
-        }
+    // Pelo mesmo `itemFor` do campo: o rótulo chega com o cache, e o `resolve`
+    // que volta um tique depois troca o valor cru sem nada aqui saber.
+    const liftedRows = computed<Item[]>(() =>
+        lifted.value
+            .map((entry) => itemFor(entry))
+            .filter((item): item is Item => item !== undefined)
+    );
 
-        return current ? [current] : [];
-    });
-
-    const pinnedKeys = computed(() => new Set(pinnedRows.value.map((item) => keyOf(item.value))));
-
-    /**
-     * As linhas do painel. Em modo estático é a lista inteira, filtrada ou não; em
-     * remoto, o que a seção de cima já mostra sai daqui — senão o item que está na
-     * página corrente **e** selecionado apareceria duas vezes.
-     */
-    const rows = computed<Item[]>(() => {
-        if (pinnedRows.value.length === 0) {
+    /** A lista de baixo: a página, menos o que já está no topo. */
+    const bodyRows = computed<Item[]>(() => {
+        if (liftedKeys.value.size === 0) {
             return filteredOptions.value;
         }
 
-        return filteredOptions.value.filter((item) => !pinnedKeys.value.has(keyOf(item.value)));
+        return filteredOptions.value.filter((item) => !liftedKeys.value.has(keyOf(item.value)));
+    });
+
+    /** As linhas do painel, na ordem em que aparecem: o topo, depois a página. */
+    const rows = computed<Item[]>(() => {
+        if (liftedRows.value.length === 0) {
+            return bodyRows.value;
+        }
+
+        return [...liftedRows.value, ...bodyRows.value];
     });
 
     const status = computed(() => remote.status.value);
 
-    const isEmpty = computed(() => rows.value.length === 0);
+    const hasPage = computed(() => _options.value.length > 0);
+
+    // Em remoto "vazio" é o que a fn disse: com tudo o que a página trouxe já no
+    // topo, a lista de baixo fica vazia sem nada ter faltado.
+    const isEmpty = computed(() => {
+        return remoteMode.value ? status.value === "empty" : bodyRows.value.length === 0;
+    });
 
     const errorText = computed(() => remote.message.value || tr(props.value.text?.failed));
 
     const retry = () => remote.retry();
 
     /**
-     * O rodapé só existe para o que acontece **abaixo** de uma lista que já tem
-     * linhas: a próxima página em voo, e o erro que não pode tomar a tela inteira.
+     * A faixa de estado do rodapé só existe para o que acontece **abaixo** de uma
+     * lista que já tem página: a seguinte em voo, e o erro que não pode tomar a
+     * tela inteira.
      */
     const footerStatus = computed<ListStatus | undefined>(() => {
         if (status.value === "loadingMore") {
             return "loadingMore";
         }
 
-        if (status.value === "error" && rows.value.length > 0) {
+        if (status.value === "error" && hasPage.value) {
             return "error";
         }
 
         return undefined;
+    });
+
+    const countText = computed(() =>
+        tr(withParams(props.value.text?.count, { n: rows.value.length }))
+    );
+
+    // `[]` em `multiple` e `null` no resto — nunca o `default`, que é o que um X
+    // não quer de volta.
+    const clear = () => {
+        model.value = props.value.multiple ? [] : null;
+    };
+
+    /**
+     * Há página seguinte a pedir: depois de a primeira assentar, e antes do fim.
+     * É o que arma a sentinela, e o que garante que a página 1 nunca dependa do
+     * observer.
+     */
+    const hasMore = computed(() => {
+        return (
+            remoteMode.value &&
+            remote.page.value > 0 &&
+            !remote.exhausted.value &&
+            status.value !== "error"
+        );
     });
 
     const rowHeight = computed(() => props.value.rowHeight ?? 48);
@@ -921,11 +996,42 @@
         }
     });
 
-    // Pré-carrega o chunk no `open` quando `options` é função: ele chega muito antes
-    // da centésima linha, e a troca deixa de ter um quadro em branco.
+    // O `open` recompõe o topo com o que está no model — é a única hora em que
+    // uma linha muda de lugar, e o painel estava fechado. Junto, pré-carrega o
+    // chunk da lista virtual: ele chega muito antes da centésima linha, e a troca
+    // deixa de ter um quadro em branco.
     watch(open, (isOpen) => {
-        if (isOpen && remoteMode.value) {
+        if (!isOpen) {
+            return;
+        }
+
+        lifted.value = remoteMode.value ? [...modelValues.value] : [];
+
+        if (remoteMode.value) {
             void import("../internal/VirtualRows.vue");
+        }
+    });
+
+    /**
+     * Uma página assentou: o que está no model e **não** veio nela sobe. Não roda
+     * com a página 1 em voo — ali a lista está vazia por definição, e tudo subiria
+     * antes de a resposta dizer o que trouxe.
+     */
+    watch(_options, (options) => {
+        if (!remoteMode.value || status.value === "loading") {
+            return;
+        }
+
+        const onPage = new Set(options.map((item) => keyOf(item.value)));
+
+        const missing = modelValues.value.filter((entry) => {
+            const key = keyOf(valueOfEntry(entry));
+
+            return !onPage.has(key) && !liftedKeys.value.has(key);
+        });
+
+        if (missing.length > 0) {
+            lifted.value = [...lifted.value, ...missing];
         }
     });
 
@@ -1020,6 +1126,22 @@
 
         observer.observe(mark);
     });
+
+    // Depois de uma página assentar a sentinela pode continuar visível — uma
+    // página menor que o painel —, e o observer não reporta o que não mudou.
+    // Reobservar refaz a leitura inicial.
+    watch(
+        _options,
+        () => {
+            const mark = sentinel.value;
+
+            if (observer && mark) {
+                observer.unobserve(mark);
+                observer.observe(mark);
+            }
+        },
+        { flush: "post" }
+    );
 
     onUnmounted(() => {
         clearTimeout(timer);
