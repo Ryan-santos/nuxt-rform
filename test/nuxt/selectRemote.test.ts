@@ -488,3 +488,34 @@ describe("o cache de rótulos do RSelect sem resolve", () => {
         expect(wrapper.get(".RSelect").text()).toContain("77");
     });
 });
+/**
+ * Da virtualização só o **chaveamento** é testável aqui: happy-dom não tem layout
+ * e todo rect é 0, então a janela em si só se vê em tela.
+ */
+describe("a virtualização do RSelect", () => {
+    const muitos = Array.from({ length: 150 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
+
+    it("não entra numa lista curta", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: muitos.slice(0, 20), pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toHaveLength(20);
+    });
+
+    it("entra acima do limiar, e o DOM deixa de ter uma linha por item", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: muitos, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper, 50);
+
+        // Sem layout o virtualizer não sabe quantas linhas cabem, mas o que importa
+        // aqui é que ele assumiu a lista: 150 `role=option` não sobraram no DOM.
+        expect(rows(wrapper).length).toBeLessThan(150);
+    });
+});

@@ -16,7 +16,15 @@ const FIXTURE = path.join("test", "fixtures", "basic", ".nuxt", "rform");
  */
 
 const sources = async () => {
-    const roots = [COMPONENTS, path.join(COMPONENTS, "fields"), path.join(COMPONENTS, "utils")];
+    // `internal/` é a terceira categoria sob `components/`: não é campo nem util, não
+    // passa por `useField`/`useUtil` e não é registrada pelo `addComponentsDir` — mas
+    // carrega classe Tailwind, então tem de entrar na varredura como as outras duas.
+    const roots = [
+        COMPONENTS,
+        path.join(COMPONENTS, "fields"),
+        path.join(COMPONENTS, "utils"),
+        path.join(COMPONENTS, "internal")
+    ];
     const found: { file: string; text: string }[] = [];
 
     for (const root of roots) {

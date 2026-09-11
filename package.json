@@ -65,6 +65,7 @@
         "@intlify/core": "^11.4.10",
         "@nuxt/icon": "^2.5.1",
         "@nuxt/kit": "^4.0.0",
+        "@tanstack/vue-virtual": "^3.13.37",
         "maska": "^3.2.0",
         "tailwind-merge": "^3.6.0"
     },

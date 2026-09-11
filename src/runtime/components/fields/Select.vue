@@ -149,29 +149,61 @@
                         role="listbox"
                         :class="props.ui?.list?.scroller"
                     >
-                        <div
-                            v-for="(option, key) in rows"
-                            :key
-                            role="option"
-                            :aria-selected="isOptionSelected(option)"
-                            :class="[
-                                props.ui?.list?.option?.container,
-                                key === 0 ? props.ui?.list?.option?.first : undefined,
-                                isOptionSelected(option)
-                                    ? props.ui?.list?.option?.selected
-                                    : undefined
-                            ]"
-                            @click="select(option)"
+                        <VirtualRows
+                            v-if="virtualized"
+                            v-slot="{ item, index }"
+                            :items="rows"
+                            :scroller="scroller"
+                            :estimate="rowHeight"
                         >
-                            <slot
-                                :selected="rowSlot(option)"
-                                :list="true"
+                            <div
+                                role="option"
+                                :aria-selected="isOptionSelected(item)"
+                                :class="[
+                                    props.ui?.list?.option?.container,
+                                    index === 0 ? props.ui?.list?.option?.first : undefined,
+                                    isOptionSelected(item)
+                                        ? props.ui?.list?.option?.selected
+                                        : undefined
+                                ]"
+                                @click="select(item)"
                             >
-                                <p :class="props.ui?.list?.option?.text">
-                                    {{ option.label }}
-                                </p>
-                            </slot>
-                        </div>
+                                <slot
+                                    :selected="rowSlot(item)"
+                                    :list="true"
+                                >
+                                    <p :class="props.ui?.list?.option?.text">
+                                        {{ item.label }}
+                                    </p>
+                                </slot>
+                            </div>
+                        </VirtualRows>
+
+                        <template v-else>
+                            <div
+                                v-for="(option, key) in rows"
+                                :key
+                                role="option"
+                                :aria-selected="isOptionSelected(option)"
+                                :class="[
+                                    props.ui?.list?.option?.container,
+                                    key === 0 ? props.ui?.list?.option?.first : undefined,
+                                    isOptionSelected(option)
+                                        ? props.ui?.list?.option?.selected
+                                        : undefined
+                                ]"
+                                @click="select(option)"
+                            >
+                                <slot
+                                    :selected="rowSlot(option)"
+                                    :list="true"
+                                >
+                                    <p :class="props.ui?.list?.option?.text">
+                                        {{ option.label }}
+                                    </p>
+                                </slot>
+                            </div>
+                        </template>
 
                         <div
                             ref="sentinel"
@@ -227,7 +259,15 @@
      * @example <RSelect name="uf" :options="ufs" multiple search />
      * @example <RSelect name="form" :options :loading @search="buscar" />
      */
-    import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
+    import {
+        computed,
+        defineAsyncComponent,
+        onMounted,
+        onUnmounted,
+        ref,
+        useTemplateRef,
+        watch
+    } from "vue";
 
     import { useField } from "#rform/composables";
     import type {
@@ -317,6 +357,12 @@
     export type OptionKey<Opts> =
         OptionOf<Opts> extends Primitive ? string : (keyof OptionOf<Opts> & string) | (string & {});
 
+    /**
+     * Acima disto a lista vira janela virtual. Constante, e não prop: quantas linhas
+     * o DOM aguenta não é conhecimento do app.
+     */
+    const VIRTUAL_THRESHOLD = 100;
+
     export const defaults = defineDefaults({
         ui: {
             container: "flex w-full flex-col gap-1",
@@ -387,6 +433,10 @@
             }
         },
         default: null,
+        // Derivado do `ui.list.option.container`, e mora ao lado dele por isso. Só
+        // governa a barra antes da primeira medição — o virtualizer remede de
+        // verdade com `measureElement`.
+        rowHeight: 48,
         // Uma prop só para dizer uma coisa só. O `merger` recursiona em objeto que
         // não é array, então `:pick="{ value: 'codigo' }"` conserva o `label` daqui.
         pick: { value: "id", label: "name" },
@@ -440,6 +490,8 @@
             resolve?: ResolveFn<Opts> | false;
             /** Espera antes de levar o termo à fn de `options`. `0` desliga. */
             debounce?: number;
+            /** Altura estimada de uma linha, para a barra antes da primeira medição. */
+            rowHeight?: number;
             // Escrito por extenso, e não num alias de dois parâmetros: com a
             // interseção atrás de um alias, o `Element` de todo campo estoura o
             // "union type too complex".
@@ -473,6 +525,7 @@
             options: Options | OptionsFn;
             resolve?: ResolveFn | false;
             debounce?: number;
+            rowHeight?: number;
             pick?: { value?: string; label?: string };
             modelFull?: boolean;
             multiple?: boolean;
@@ -769,6 +822,12 @@
 
     const dropdownMiddleware = [dropdownFit()];
 
+    // `defineAsyncComponent` é a fronteira de *setup* que o `useVirtualizer` exige
+    // — ele registra watch/onMounted e precisa da instância corrente, que não
+    // sobrevive a um `await import()` no meio deste setup — e a fronteira de *chunk*
+    // que o bundle exige, de uma vez.
+    const VirtualRows = defineAsyncComponent(() => import("../internal/VirtualRows.vue"));
+
     const scroller = useTemplateRef<HTMLElement>("scroller");
     const sentinel = useTemplateRef<HTMLElement>("sentinel");
 
@@ -831,6 +890,35 @@
         }
 
         return undefined;
+    });
+
+    const rowHeight = computed(() => props.value.rowHeight ?? 48);
+
+    /**
+     * Acima do limiar a lista vira janela virtual, sozinha — não é prop, é decisão.
+     * A troca é **monotônica dentro de uma abertura**: uma vez virtualizado
+     * continua assim até fechar, porque alternar a estratégia a cada tecla é jitter
+     * de scroll e de foco.
+     */
+    const virtualized = ref(false);
+
+    watch([rows, open], ([list, isOpen]) => {
+        if (!isOpen) {
+            virtualized.value = false;
+            return;
+        }
+
+        if (list.length > VIRTUAL_THRESHOLD) {
+            virtualized.value = true;
+        }
+    });
+
+    // Pré-carrega o chunk no `open` quando `options` é função: ele chega muito antes
+    // da centésima linha, e a troca deixa de ter um quadro em branco.
+    watch(open, (isOpen) => {
+        if (isOpen && remoteMode.value) {
+            void import("../internal/VirtualRows.vue");
+        }
     });
 
     let timer: ReturnType<typeof setTimeout> | undefined;
