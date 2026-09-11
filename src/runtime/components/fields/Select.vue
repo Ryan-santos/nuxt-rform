@@ -406,7 +406,9 @@
             },
             list: {
                 search: {
-                    container: "relative shrink-0 bg-(--rf-color-background-300)",
+                    // O `z-0` é o stacking context que deixa o ícone (`-z-1`) pintar
+                    // acima deste fundo e abaixo do input; sem ele o ícone some.
+                    container: "relative z-0 shrink-0 bg-(--rf-color-background-300)",
                     icon: "absolute top-1/2 left-3 -z-1 -translate-y-1/2 opacity-60",
                     input: `
                         w-full p-3 pl-10 outline-0
