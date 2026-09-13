@@ -1,6 +1,56 @@
 # Changelog
 
 
+## v0.3.0
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.2.0...v0.3.0)
+
+### 🚀 Enhancements
+
+- Expondo o @search no RSelect ([97d8c7b](https://github.com/Ryan-santos/nuxt-rform/commit/97d8c7b))
+- Adicionando o --rf-color-border ([c2b9782](https://github.com/Ryan-santos/nuxt-rform/commit/c2b9782))
+- Teleportando o painel do Dropdown ([025cc79](https://github.com/Ryan-santos/nuxt-rform/commit/025cc79))
+- Dando um teto à altura do RSelect ([8164305](https://github.com/Ryan-santos/nuxt-rform/commit/8164305))
+- ⚠️  Trocando keyValue/keyLabel pelo pick ([4448412](https://github.com/Ryan-santos/nuxt-rform/commit/4448412))
+- Options como função, resolve e cache de rótulos no RSelect ([d05a39b](https://github.com/Ryan-santos/nuxt-rform/commit/d05a39b))
+- Lista infinita e seção do selecionado no RSelect ([3697be4](https://github.com/Ryan-santos/nuxt-rform/commit/3697be4))
+- Virtualizando a lista do RSelect acima de 100 linhas ([cd85a5d](https://github.com/Ryan-santos/nuxt-rform/commit/cd85a5d))
+- Cenário do RSelect remoto no playground basic ([c168552](https://github.com/Ryan-santos/nuxt-rform/commit/c168552))
+- Subindo o escolhido ao topo da lista do RSelect ([fde01b1](https://github.com/Ryan-santos/nuxt-rform/commit/fde01b1))
+- O total do rodapé do RSelect vindo da API ([ba71e2c](https://github.com/Ryan-santos/nuxt-rform/commit/ba71e2c))
+
+### 🩹 Fixes
+
+- Restaurando os tipos do dist ([bf0d41b](https://github.com/Ryan-santos/nuxt-rform/commit/bf0d41b))
+- Devolvendo o z-0 ao container da busca do RSelect ([2c567a6](https://github.com/Ryan-santos/nuxt-rform/commit/2c567a6))
+- Abrindo o painel no lado mais folgado ([36edf19](https://github.com/Ryan-santos/nuxt-rform/commit/36edf19))
+
+### 💅 Refactors
+
+- Extraindo normalizeOptions e fnProp ([d9b44ac](https://github.com/Ryan-santos/nuxt-rform/commit/d9b44ac))
+- Levando o withParams do RFile ao #rform/utils ([bb1064f](https://github.com/Ryan-santos/nuxt-rform/commit/bb1064f))
+
+### 📖 Documentation
+
+- Options remoto, resolve e lista longa no site ([d7bd0f2](https://github.com/Ryan-santos/nuxt-rform/commit/d7bd0f2))
+- O topo da lista, o rodapé e o demo multiple contra a API ([bdabd45](https://github.com/Ryan-santos/nuxt-rform/commit/bdabd45))
+
+### ✅ Tests
+
+- Gravando o debounce padronizado pelo app ([70fafc7](https://github.com/Ryan-santos/nuxt-rform/commit/70fafc7))
+
+### 🎨 Styles
+
+- Separando o topo da lista ([502092b](https://github.com/Ryan-santos/nuxt-rform/commit/502092b))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Trocando keyValue/keyLabel pelo pick ([4448412](https://github.com/Ryan-santos/nuxt-rform/commit/4448412))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.2.0
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.1.2...v0.2.0)
