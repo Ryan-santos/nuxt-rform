@@ -566,6 +566,8 @@
             debounce?: number;
             /** Altura estimada de uma linha, para a barra antes da primeira medição. */
             rowHeight?: number;
+            /** Altura que o painel pede antes de preferir o lado mais folgado do campo. */
+            minHeight?: number;
             // Escrito por extenso, e não num alias de dois parâmetros: com a
             // interseção atrás de um alias, o `Element` de todo campo estoura o
             // "union type too complex".
@@ -600,6 +602,7 @@
             resolve?: ResolveFn | false;
             debounce?: number;
             rowHeight?: number;
+            minHeight?: number;
             pick?: { value?: string; label?: string };
             modelFull?: boolean;
             multiple?: boolean;
@@ -912,7 +915,12 @@
 
     const open = ref(false);
 
-    const dropdownMiddleware = [dropdownFit()];
+    // O mínimo é lido cru na frente, como o `debounce`: um default truthy do app
+    // engoliria `:min-height="0"` pela regra "não apaga" do `merger`, e abrir
+    // sempre embaixo ficaria impossível, calado.
+    const dropdownMiddleware = computed(() => [
+        dropdownFit(_props.minHeight ?? props.value.minHeight)
+    ]);
 
     // `defineAsyncComponent` é a fronteira de *setup* que o `useVirtualizer` exige
     // — ele registra watch/onMounted e precisa da instância corrente, que não

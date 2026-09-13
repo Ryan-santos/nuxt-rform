@@ -106,6 +106,33 @@
                 />
             </RForm>
         </Scenario>
+
+        <Scenario
+            title="lado do painel"
+            :value="data"
+        >
+            <RForm
+                v-model="data"
+                class="flex flex-col gap-4"
+            >
+                <div class="h-[60vh]" />
+                <RSelect
+                    name="pedindo"
+                    label="Mínimo padrão"
+                    placeholder="320px embaixo, ou vai para o lado mais folgado"
+                    search
+                    :options="muitas"
+                />
+                <RSelect
+                    name="semMinimo"
+                    label="Sem mínimo"
+                    placeholder="min-height 0 abre embaixo enquanto couber"
+                    search
+                    :min-height="0"
+                    :options="muitas"
+                />
+            </RForm>
+        </Scenario>
     </div>
 </template>
 
