@@ -1,6 +1,7 @@
 import { mountSuspended } from "@nuxt/test-utils/runtime";
 // @vitest-environment nuxt
 import { describe, expect, it, vi } from "vitest";
+import { h } from "vue";
 
 import { RSelect } from "#components";
 
@@ -38,6 +39,14 @@ type Finder = { findAll: (s: string) => { text: () => string }[] };
 /** As linhas do painel, na ordem em que aparecem. */
 const rows = (wrapper: Finder) =>
     wrapper.findAll('[role="listbox"] [role="option"]').map((row) => row.text());
+
+type Listed = { get: (s: string) => { element: Element } };
+
+/** O papel de cada filho da lista, na ordem — a sentinela não tem nenhum. */
+const structure = (wrapper: Listed) =>
+    [...wrapper.get('[role="listbox"]').element.children]
+        .map((child) => child.getAttribute("role"))
+        .filter((role): role is string => role !== null);
 
 type Clicker = {
     findAll: (s: string) => { text: () => string; trigger: (e: string) => Promise<void> }[];
@@ -567,6 +576,54 @@ describe("o cache de rótulos do RSelect sem resolve", () => {
 
         expect(wrapper.get(".RSelect").text()).toContain("77");
     });
+
+    it("a marca do fim do topo é um elemento entre os dois blocos", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => users, modelValue: 2, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        // ["Bruno" (do model), "Ana" (da página)], com a marca no meio.
+        expect(rows(wrapper)).toEqual(["Bruno", "Ana"]);
+        expect(structure(wrapper)).toEqual(["option", "presentation", "option"]);
+    });
+
+    it("sem topo não há marca — a lista é um bloco só", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: users, modelValue: 2, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(structure(wrapper)).toEqual(["option", "option"]);
+    });
+
+    it("nem quando a página só traz o que já está no topo", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => [users[1]], modelValue: 2, pick } as never
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(rows(wrapper)).toEqual(["Bruno"]);
+        expect(structure(wrapper)).toEqual(["option"]);
+    });
+
+    it("o slot divider recebe quantas linhas vieram do model", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: () => users, modelValue: 2, pick } as never,
+            slots: { divider: ({ count }: { count: number }) => h("b", `${count} no topo`) }
+        });
+
+        await open(wrapper);
+        await settle(wrapper);
+
+        expect(wrapper.get('[role="presentation"]').text()).toBe("1 no topo");
+    });
 });
 /**
  * Da virtualização só o **chaveamento** é testável aqui: happy-dom não tem layout
@@ -597,5 +654,30 @@ describe("a virtualização do RSelect", () => {
         // Sem layout o virtualizer não sabe quantas linhas cabem, mas o que importa
         // aqui é que ele assumiu a lista: 150 `role=option` não sobraram no DOM.
         expect(rows(wrapper).length).toBeLessThan(150);
+    });
+
+    it("a marca do fim do topo entra na conta da janela, como qualquer linha", async () => {
+        const altura = (wrapper: Listed) =>
+            wrapper.get('[role="listbox"] > div').element.getAttribute("style");
+
+        const semTopo = await mountSuspended(RSelect, {
+            props: { options: () => muitos, pick, rowHeight: 10 } as never
+        });
+
+        await open(semTopo);
+        await settle(semTopo, 50);
+
+        expect(altura(semTopo)).toContain("height: 1500px");
+
+        const comTopo = await mountSuspended(RSelect, {
+            props: { options: () => muitos, modelValue: 2, pick, rowHeight: 10 } as never
+        });
+
+        await open(comTopo);
+        await settle(comTopo, 50);
+
+        // A marca é a 151ª entrada, medida pelo virtualizer como as outras: um nó
+        // fora dele não entraria nesta conta, e é aí que os offsets desalinham.
+        expect(altura(comTopo)).toContain("height: 1510px");
     });
 });

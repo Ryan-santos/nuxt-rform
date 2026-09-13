@@ -1677,6 +1677,26 @@ reabrir é o que reorganiza.
 esteve; subi-lo reordenaria a lista de 100% dos usuários de hoje, calado. Mesma
 regra do `resolve`, e pelo mesmo motivo.
 
+**A fronteira é uma entrada da lista, não um nó antes dela.** Quem marca onde o
+topo acaba é uma linha própria (`ui.list.divider`, `role="presentation"`), que o
+`entries` insere entre os dois blocos. **Entrada**, e não um `<div>` posto antes
+do `<VirtualRows>`: o virtualizer mede a partir do topo do scroller, então um nó
+a mais ali empurraria toda linha sem ele saber, e a correção seria um
+`scrollMargin` que o `VirtualRows` não expõe. Como entrada ela é medida junto com
+as outras, e os dois modos de render ficam idênticos — o guarda disso é a altura
+total da janela em `selectRemote.test.ts`, que conta 151 com a marca e 150 sem.
+
+Ela existe só quando há os dois lados: sem topo ou sem página o `entries` é um
+bloco só, e ninguém fica com um traço pendurado. E o `first` — o `border-t-0` de
+quem abre um bloco — viaja **na entrada**, não num `index === 0`: a linha logo
+abaixo da marca é uma dessas, senão o traço de 1px dela encostaria no tracejado.
+
+Vazia por default, com o slot `divider` (`{ count }`, quantas linhas vieram do
+model) para o texto que cada app escreve — não há chave de tradução a inventar
+para uma palavra que ninguém escreve igual. A cor é o `--rf-color-border` de
+sempre e o peso vem da espessura: um `--rf-color-primary` ali encostaria no fundo
+sólido da linha escolhida logo acima, que é justo o que ela precisa separar.
+
 A linha é **a mesma linha**: mesmo `ui.list.option.*`, mesmo slot `default` com
 `list: true`, mesmo `select(option)`. Não há terceiro valor de `list` a inventar.
 Em remoto, "vazio" passou a ser o `status === "empty"` da composable, e não

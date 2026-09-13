@@ -102,58 +102,85 @@
                     >
                         <VirtualRows
                             v-if="virtualized"
-                            v-slot="{ item, index }"
-                            :items="rows"
+                            v-slot="{ item: row }"
+                            :items="entries"
                             :scroller="scroller"
                             :estimate="rowHeight"
                         >
                             <div
+                                v-if="row.divider"
+                                role="presentation"
+                                :class="props.ui?.list?.divider"
+                            >
+                                <slot
+                                    name="divider"
+                                    :count="liftedRows.length"
+                                />
+                            </div>
+
+                            <div
+                                v-else
                                 role="option"
-                                :aria-selected="isOptionSelected(item)"
+                                :aria-selected="isOptionSelected(row.option)"
                                 :class="[
                                     props.ui?.list?.option?.container,
-                                    index === 0 ? props.ui?.list?.option?.first : undefined,
-                                    isOptionSelected(item)
+                                    row.first ? props.ui?.list?.option?.first : undefined,
+                                    isOptionSelected(row.option)
                                         ? props.ui?.list?.option?.selected
                                         : undefined
                                 ]"
-                                @click="select(item)"
+                                @click="select(row.option)"
                             >
                                 <slot
-                                    :selected="rowSlot(item)"
+                                    :selected="rowSlot(row.option)"
                                     :list="true"
                                 >
                                     <p :class="props.ui?.list?.option?.text">
-                                        {{ item.label }}
+                                        {{ row.option.label }}
                                     </p>
                                 </slot>
                             </div>
                         </VirtualRows>
 
                         <template v-else>
-                            <div
-                                v-for="(option, key) in rows"
+                            <template
+                                v-for="(row, key) in entries"
                                 :key
-                                role="option"
-                                :aria-selected="isOptionSelected(option)"
-                                :class="[
-                                    props.ui?.list?.option?.container,
-                                    key === 0 ? props.ui?.list?.option?.first : undefined,
-                                    isOptionSelected(option)
-                                        ? props.ui?.list?.option?.selected
-                                        : undefined
-                                ]"
-                                @click="select(option)"
                             >
-                                <slot
-                                    :selected="rowSlot(option)"
-                                    :list="true"
+                                <div
+                                    v-if="row.divider"
+                                    role="presentation"
+                                    :class="props.ui?.list?.divider"
                                 >
-                                    <p :class="props.ui?.list?.option?.text">
-                                        {{ option.label }}
-                                    </p>
-                                </slot>
-                            </div>
+                                    <slot
+                                        name="divider"
+                                        :count="liftedRows.length"
+                                    />
+                                </div>
+
+                                <div
+                                    v-else
+                                    role="option"
+                                    :aria-selected="isOptionSelected(row.option)"
+                                    :class="[
+                                        props.ui?.list?.option?.container,
+                                        row.first ? props.ui?.list?.option?.first : undefined,
+                                        isOptionSelected(row.option)
+                                            ? props.ui?.list?.option?.selected
+                                            : undefined
+                                    ]"
+                                    @click="select(row.option)"
+                                >
+                                    <slot
+                                        :selected="rowSlot(row.option)"
+                                        :list="true"
+                                    >
+                                        <p :class="props.ui?.list?.option?.text">
+                                            {{ row.option.label }}
+                                        </p>
+                                    </slot>
+                                </div>
+                            </template>
                         </template>
 
                         <div
@@ -260,7 +287,8 @@
      * `@search` reporta o termo digitado e transfere o filtro para quem escuta —
      * é o que permite buscar no servidor em vez de na lista já carregada. Ele
      * liga o campo de busca sozinho. `options` em função vai além: o campo pagina,
-     * sobe o escolhido ao topo da lista e guarda o rótulo dele.
+     * sobe o escolhido ao topo da lista, marca onde ele acaba e guarda o rótulo
+     * dele.
      *
      * O painel termina num rodapé com o total de linhas — o da API, quando a fn
      * devolve `{ items, total }` — e um botão que esvazia a seleção; o mesmo X
@@ -401,7 +429,7 @@
                 },
                 // O X do campo: só com seleção, e nunca com `disabled`.
                 clear: `
-                    flex cursor-pointer p-3 pr-0 opacity-50 transition-opacity duration-300
+                    flex cursor-pointer p-3 pl-0 opacity-50 transition-opacity duration-300
                     hover:opacity-100
                 `,
                 icon: "m-3 ml-0"
@@ -410,7 +438,8 @@
                 search: {
                     // O `z-0` é o stacking context que deixa o ícone (`-z-1`) pintar
                     // acima deste fundo e abaixo do input; sem ele o ícone some.
-                    container: "relative z-0 shrink-0 bg-(--rf-color-background-300)",
+                    container:
+                        "relative z-0 shrink-0 border-b border-(--rf-color-border) bg-(--rf-color-background-200)",
                     icon: "absolute top-1/2 left-3 -z-1 -translate-y-1/2 opacity-60",
                     input: `
                         w-full p-3 pl-10 outline-0
@@ -419,6 +448,12 @@
                 },
                 container: "flex min-h-0 flex-1 flex-col",
                 scroller: "min-h-0 flex-1 overflow-auto overscroll-contain",
+                // A marca entre o topo e a página. Vazia por default: o traço e o ar
+                // já dizem onde um acaba, e o texto, se houver, vem do slot.
+                divider: `
+                    flex flex-row items-center justify-center gap-2 border-t-5 border-dashed
+                    border-(--rf-color-border) text-sm opacity-60
+                `,
                 sentinel: "h-px w-full",
                 option: {
                     container: `
@@ -435,7 +470,8 @@
                     opacity-60
                 `,
                 footer: {
-                    container: "flex shrink-0 flex-col border-t border-(--rf-color-border) text-sm",
+                    container:
+                        "flex shrink-0 flex-col border-t border-(--rf-color-border) bg-(--rf-color-background-200) text-sm",
                     // A faixa de estado: a próxima página em voo, ou o erro com retry.
                     status: `
                         flex flex-row items-center justify-center gap-2 border-b border-(--rf-color-border)
@@ -449,11 +485,11 @@
                     `,
                     transition: {
                         name: "",
-                        enterActiveClass: "transition-opacity duration-300",
+                        enterActiveClass: "transition-all duration-500",
                         enterToClass: "",
-                        enterFromClass: "opacity-0",
-                        leaveActiveClass: "transition-opacity duration-300",
-                        leaveToClass: "opacity-0",
+                        enterFromClass: "opacity-0 -mb-10",
+                        leaveActiveClass: "transition-all duration-500",
+                        leaveToClass: "opacity-0 -mb-10",
                         leaveFromClass: ""
                     }
                 },
@@ -605,12 +641,17 @@
     type Item = OptionItem<Original, ValueOf<Opts, KeyValue>, LabelOf<Opts, KeyLabel>>;
     type Selected = Multiple extends true ? Item[] : Item;
 
+    /** Uma linha do painel: uma opção, ou a marca de onde o topo acabou. */
+    type Row = { divider: true } | { divider: false; first: boolean; option: Item };
+
     defineSlots<{
         default(props: { selected: Selected; list: boolean }): void;
         leading(): void;
         trailing(): void;
         /** No lugar da lista, quando não há nada a mostrar. */
         empty(): void;
+        /** A marca entre o topo e a página. `count` é quantas linhas vieram do model. */
+        divider(props: { count: number }): void;
         /** O rodapé inteiro: a faixa de estado, o total de linhas e o limpar. */
         footer(props: {
             status?: ListStatus;
@@ -922,6 +963,25 @@
         }
 
         return [...liftedRows.value, ...bodyRows.value];
+    });
+
+    /**
+     * O que a lista renderiza: as opções, e a marca entre o topo e a página quando
+     * há os dois. Ela é uma **entrada**, e não um nó antes do `VirtualRows`, porque
+     * um elemento a mais dentro do scroller desalinharia os offsets do virtualizer.
+     *
+     * O `first` viaja na entrada em vez de sair de um índice: quem abre um bloco
+     * não leva o traço de cima, e a linha logo abaixo da marca é uma dessas.
+     */
+    const entries = computed<Row[]>(() => {
+        const block = (list: Item[]): Row[] =>
+            list.map((option, index) => ({ divider: false, first: index === 0, option }));
+
+        if (liftedRows.value.length === 0 || bodyRows.value.length === 0) {
+            return block(rows.value);
+        }
+
+        return [...block(liftedRows.value), { divider: true }, ...block(bodyRows.value)];
     });
 
     const status = computed(() => remote.status.value);
