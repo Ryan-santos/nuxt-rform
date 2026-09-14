@@ -935,6 +935,14 @@ export default defineNuxtModule<ModuleOptions>({
         nuxt.options.alias[`#${name}/builtin`] = componentsPath;
         nuxt.options.alias[`#${name}/builtin/*`] = `${componentsPath}/*`;
 
+        // O compiler-sfc só usa os `paths` do tsconfig que **inclui** o `.d.vue.ts`
+        // em `node_modules`. Absoluto (o kit relativiza) e do mesmo `componentsPath`
+        // do alias. Ver "O consumidor precisa incluir os `.d.vue.ts`" no CLAUDE.md.
+        nuxt.hook("prepare:types", ({ tsConfig }) => {
+            tsConfig.include ||= [];
+            tsConfig.include.push(`${componentsPath}/**/*.d.vue.ts`);
+        });
+
         const alias = `${nuxt.options.buildDir}/${name}`;
 
         // Alias **exato**, antes de `#rform/*`: sem extensão o resolver de CSS do Vite

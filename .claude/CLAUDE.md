@@ -1115,6 +1115,71 @@ A guarda é o segundo `describe` de `test/unit/dist.test.ts`, e cobre a regra: t
 sem build; o que ela não prova é que o `dist` monta, e isso continua sendo `npm pack`
 num app de verdade.
 
+#### O consumidor precisa incluir os `.d.vue.ts` do pacote
+
+Um campo do app que **estende** o `Props` de um embutido —
+`Omit<SelectProps, "options"> & { route }` a partir de
+`#rform/builtin/fields/Select.vue` — quebrava o `nuxi build` do app instalado com
+`[@vue/compiler-sfc] Failed to resolve import source "#rform/types"`, apontando para
+o `Select.d.vue.ts` **dentro de `node_modules`**. Era a issue #5, e a indireção que
+a seção acima preserva de propósito é o que a arma: o `.d.vue.ts` emitido importa
+`#rform/types`, e só o `.nuxt` do app sabe para onde isso aponta.
+
+O compiler-sfc precisa enumerar as props em runtime, então segue o tipo até o
+arquivo do pacote e, para resolver o alias, faz `ts.findConfigFile` **a partir desse
+arquivo** (`resolveWithTS`). Acha o `tsconfig.json` do app, carrega ele e os
+referenciados, e escolhe o que **inclui** o arquivo pelo `include`/`exclude` — por
+`minimatch`, não pela semântica do TS. Nenhum inclui `node_modules`, e o fallback é
+o **último** da lista: a raiz, `files: []`, sem `paths`. O `exclude: ["../node_modules"]`
+que o Nuxt escreve não atrapalha, porque sem `**` o minimatch não casa descendente
+— é uma mudança de semântica do compiler-sfc de distância de passar a atrapalhar,
+e é por isso que o primeiro `describe` de `test/unit/builtinInclude.test.ts` existe.
+
+O kit só põe `runtime`/`dist/runtime` no `include` de módulo que mora **dentro** do
+`rootDir` e fora de `node_modules`; instalado, o módulo recebe só `exclude`. Daí o
+`module.ts` empurrar a entrada, no `prepare:types`:
+
+```ts
+tsConfig.include.push(`${componentsPath}/**/*.d.vue.ts`);
+```
+
+Três decisões nessa linha, e as três foram medidas:
+
+- **Absoluto, e o kit relativiza.** O `resolveConfig` do `writeTypes` troca todo
+  `include` absoluto por `relativeWithDot(buildDir, p)`, com `pathe`. Um
+  `relative()` do `node:path` no Windows sairia com `\`, e o minimatch lê `\` como
+  escape — a entrada compilaria e nunca casaria.
+- **Do mesmo `componentsPath` do alias, e não do link.** O compiler-sfc resolve o
+  arquivo pelo `ts.sys.realpath`, então com pnpm o arquivo lido mora em
+  `node_modules/.pnpm/…`, e um padrão escrito pelo `node_modules/nuxt-rform/…` do
+  link **não casa** — o contorno que o consumidor escreveria à mão só funciona no
+  layout plano do npm. O `exsolve` já entrega ao Nuxt o caminho real do módulo, e o
+  jiti o preserva, então `import.meta.url` — e o `componentsPath` — já é o real;
+  alias e `include` saem da mesma variável e concordam por construção.
+- **Só `.d.vue.ts`, e só sob `components/`.** São declaration files, então o
+  `skipLibCheck` os ignora no editor e no `vue-tsc`; `runtime/**` inteiro poria os
+  `.vue` e os `.js` do pacote no programa do Volar. O que se perde com o recorte,
+  medido contra o `dist` de verdade: o `type.d.ts` (fora de `components/`) importa
+  `#rform/types/presets` e `#rform/types/tr`, e continua sem casar — `rule` e
+  `error` saem com `type: null` no consumidor em vez de `[Function, Array]` /
+  `String`. É o mesmo que **todo** campo de usuário já recebe hoje: o
+  `inferRuntimeType` falha macio por prop, e só a resolução do `Props` inteiro é que
+  falha alto. Incluir `runtime/**/*.d.ts` fecharia isso; não se fez.
+
+Uma linha de `include` **não** cobre o pacote linkado (`pnpm link`, `file:` para um
+diretório): o `findConfigFile` sobe a partir do arquivo **real**, que mora fora da
+árvore do app, e nunca chega ao tsconfig dele. É o cenário do clone que a issue
+descreve como "passa" — passa porque acha o tsconfig deste repo, com o `paths`.
+
+Duas guardas em `test/unit/builtinInclude.test.ts`: o compiler-sfc de verdade sobre
+um consumidor sintético em layout pnpm (sem a entrada morre em `#rform/types`; com
+ela o `Props` estendido enumera `label` e `route` e perde `options`; pelo link não
+casa) e o `tsconfig.app.json` gerado da fixture carregando a entrada. Como a do
+`paths`, ela prova a regra e não o pacote — o antes e o depois foram conferidos com
+`npm pack`, `pnpm install` e `nuxi build` num app fora do repo, onde o `before.tgz`
+morre na linha 113 do `Select.d.vue.ts` e o `after.tgz` monta com as 23 props
+enumeradas e o `vue-tsc` limpo.
+
 #### Os specifiers saem sem extensão
 
 Os specifiers do `export *` passam por `specifier()` e saem **sem extensão**. Com `.ts` no caminho, o TS precisa de `allowImportingTsExtensions` e um app consumidor normalmente não liga — o sintoma é `TS2614: Module '#rform/utils' has no exported member 'defineRule'`, como se o barrel não exportasse nada nomeado.
