@@ -915,6 +915,57 @@ Cuidado com esse parâmetro: `arr.map(parseIncoming)` passaria o **índice** com
 - **Não** tipa nada a partir de `OBJ["text"]`, e não tem como — ver "O `Element` não deriva os props de texto", acima. Campo com texto intersecciona `TextProp<typeof defaults.text>` no próprio `Props`, ao lado da entrada em `defaults.text`; `label` e `placeholder` também ficam de fora do `Element` — quem os usa declara o próprio `TrInput` (é o `placeholder?: TrInput` do `File`).
 - Atenção: se `defaults.default = null`, então `modelValue?: null` — props com valores diferentes precisam sobrescrever via `Omit<Element<...>, "modelValue" | "default"> & { modelValue?: unknown; default?: unknown }`.
 
+#### O `Props` do `RForm` não deriva do `Element`
+
+```ts
+export type Props<T extends Base = Base> = {
+    modelValue?: T;
+    default?: T;
+    "onUpdate:modelValue"?: ($event: T) => void;
+    ui?: string;
+    schema?: Schema;
+    rules?: ZodType;
+    focusError?: boolean;
+    onSubmit?: (data: T) => FormErrors | void | Promise<FormErrors | void>;
+};
+```
+
+Escrito à mão, só com o que o Form usa: ele não é campo, e `name`, `rule`,
+`error`, `required`, `loading` e `disabled` não faziam nada ali. É o `v-model`
+que infere o `T`, e daí ele chega ao `default` e ao `data` do `onSubmit`:
+`@submit="(data) => data.nome"` sai com o tipo do model.
+
+**Isso já foi `Element<typeof defaults> & { onSubmit?: (data: T) => … }`**, com o
+`T` aparecendo só no `onSubmit`. Nada o inferia do model, e o `@evento` não
+ajuda: o vue-tsc passa `{ onSubmit: {} as any }` no ponto de inferência e só
+checa o handler depois, contra o `Props` já instanciado. Então o `T` caía em
+`Base`: `data.nome` de um arrow inline era `unknown`, e um handler declarado
+com o model do app — `(data: Cadastro) => …` com uma chave **obrigatória** —
+nem compilava. As demos não viam porque o `Cadastro` delas é todo opcional, e
+`Record<string, unknown>` é atribuível a `{ nome?: string }`.
+
+O `useField` continua exigindo um `Element`, e o `Props` só o satisfaz por um
+espelho, `InternalProps = Omit<Props, "onUpdate:modelValue">` — o `File` faz o
+mesmo. Duas razões, uma por chave:
+
+- **sem generic**, porque o `BooleanKey` do `DefineProps` do Vue
+  (`T[K] extends boolean | undefined`) fica **deferido** num `modelValue?: T` — o
+  constraint `Record<string, unknown>` não decide a condicional — e o `model` do
+  `useField` sairia `(T & true) | (T & false)`; o `model = undefined` do `@reset`
+  deixa de compilar;
+- **sem o `onUpdate:modelValue`**, porque escrito à mão ele nunca satisfaz o do
+  `Element` — parâmetro de função é contravariante, e `unknown` não vai para
+  `Base`. Os campos passam porque `Element<…, D>` contra `Element` é comparado
+  pela **variância do alias**, não estruturalmente; medido, nem `<U extends T>`
+  passa. O `useField` não lê essa chave — só o Vue, em runtime.
+
+A declaração de runtime perdeu exatamente as seis chaves de campo e `ui` virou
+`type: String`, medido pelo `compileScript`. A guarda é
+`test/fixtures/basic/components/FormTypes.vue`, no molde da `SelectTypes.vue`:
+o `data` do arrow inline e do handler declarado é o model, o `default` é o model,
+um handler de outro model ou um `default` de outra forma não passa, e
+`Components["Form"]["rule"]` não existe.
+
 ### A prop `autocomplete`
 
 É **prop**, e não atributo de fallthrough. Todo campo tem um `<div>` na raiz e
@@ -1913,6 +1964,19 @@ funcionam; só uma se escreve:
 
 Vale em todo lugar que o usuário lê ou copia — demo, página do site, playground —
 e é o que faz o componente parecer com o resto do Vue que ele já escreve.
+
+**O `@evento` é checado contra a prop-callback, com uma exceção medida.** O
+vue-tsc resolve `@submit` por `__VLS_ResolveEvent`, que cai no próprio `Props`
+quando `onSubmit` é prop, e o handler é atribuído a ele: `@submit="takesNumber"`
+com `takesNumber: (n: number) => void` reprova no nome do evento, e `async` ou
+`: void` idem. O que escapa é o handler cujo retorno inferido é **exatamente
+`undefined`** — `(v) => void v`, `return undefined`. Aí o retorno é atribuível ao
+`| undefined` da prop opcional, o TS entra na elaboração *"did you mean to call
+this expression?"* e ancora o TS2322 na expressão inteira, cujo `(` de abertura o
+`generateInterpolation` do vue-tsc emite sem mapeamento — o diagnóstico não volta
+ao template e é descartado. Vale para todo `@evento` sobre prop-callback, o
+`@complete` do `RPin` incluído. Por isso os helpers da `FormTypes.vue` têm corpo
+em bloco, e não `=> void value`.
 
 ### Tipagem não entra no template
 

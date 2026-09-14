@@ -41,7 +41,7 @@
     import type { ZodType } from "zod";
 
     import { useField, useProvide } from "#rform/composables";
-    import type { Element, FormErrors } from "#rform/types";
+    import type { FormErrors } from "#rform/types";
     import type { Schema } from "#rform/types/schema";
     import { defineDefaults, flattenErrors, focusFirstError, isErrorsObject } from "#rform/utils";
 
@@ -59,18 +59,29 @@
         schema: {} as Schema
     });
 
-    // Sem field type: o Form mora fora de `components/fields`, então não tem membro
-    // no `FieldType` contra o qual estreitar o `rule`.
+    // Sem `Element`: o Form não é campo, e `name`, `rule`, `error`, `required`,
+    // `loading` e `disabled` não fazem nada aqui. Só o que ele usa, e o `T` é o
+    // `v-model` que infere — daí ele chega ao `default` e ao `data` do `onSubmit`.
     //
     // `rules`, `focusError` e o retorno do `onSubmit` ficam **fora** do `defaults`: o
     // `merger` copia a chave de qualquer jeito, e um `focusError: true` ali seria
     // impossível de desligar (ver "O `errorsBag`" no `.claude/CLAUDE.md`).
-    export type Props<T extends Base = Base> = Element<typeof defaults> & {
+    export type Props<T extends Base = Base> = {
+        modelValue?: T;
+        default?: T;
+        ui?: string;
         schema?: Schema;
         rules?: ZodType;
         focusError?: boolean;
         onSubmit?: (data: T) => FormErrors | void | Promise<FormErrors | void>;
+        "onUpdate:modelValue"?: ($event: T) => void;
     };
+
+    // Espelho para o `useField`, como o `InternalProps` do File: sem generic, porque
+    // o `BooleanKey` do Vue fica deferido num `modelValue?: T` e o `model` sairia
+    // `(T & true) | (T & false)`; e sem o `onUpdate:modelValue`, que só o Vue lê em
+    // runtime e que, escrito à mão, não satisfaz o `Element` estruturalmente.
+    type InternalProps = Omit<Props, "onUpdate:modelValue">;
 </script>
 
 <script setup lang="ts" generic="T extends Base">
@@ -78,12 +89,10 @@
     // com `type: Boolean`, e o boolean casting do Vue transformaria a prop ausente em
     // `false`, desligando o recurso por padrão.
     const _props = withDefaults(defineProps<Props<T>>(), {
-        required: undefined,
-        loading: undefined,
         focusError: undefined
     });
 
-    const { id, model, props } = await useField(_props);
+    const { id, model, props } = await useField(_props as unknown as InternalProps);
 
     useProvide({
         id,
