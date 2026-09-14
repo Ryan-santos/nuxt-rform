@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.3.1
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.0...v0.3.1)
+
+### 🩹 Fixes
+
+- Incluindo os .d.vue.ts no tsconfig do app ([a279aee](https://github.com/Ryan-santos/nuxt-rform/commit/a279aee))
+- Levando o model do RForm ao submit ([fe21d12](https://github.com/Ryan-santos/nuxt-rform/commit/fe21d12))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.0
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.2.0...v0.3.0)
