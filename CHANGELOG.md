@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.3.3
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.2...v0.3.3)
+
+### 🚀 Enhancements
+
+- Prop clearable no RSelect ([d2b8990](https://github.com/Ryan-santos/nuxt-rform/commit/d2b8990))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.2
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.1...v0.3.2)
