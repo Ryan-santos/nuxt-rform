@@ -199,3 +199,39 @@ describe("o X de limpar no campo do RSelect", () => {
         expect(x(wrapper).exists()).toBe(false);
     });
 });
+/**
+ * `clearable: false` recusa o gesto nos dois lugares, e tira os dois `<button>`
+ * do DOM — esconder por classe deixaria a intenção numa camada de `ui`.
+ */
+describe("a prop clearable do RSelect", () => {
+    const x = (wrapper: { find: (s: string) => { exists: () => boolean } }) =>
+        wrapper.find('[aria-haspopup="listbox"] button[aria-label="Limpar"]');
+
+    it("tira o X do campo", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: users, modelValue: 2, clearable: false, pick } as never
+        });
+
+        expect(x(wrapper).exists()).toBe(false);
+    });
+
+    it("tira o botão do rodapé do DOM, não o desabilita", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: users, modelValue: 2, clearable: false, pick } as never
+        });
+
+        await open(wrapper);
+
+        expect(wrapper.findAll("button").some((b) => b.text() === "Limpar")).toBe(false);
+    });
+
+    it("mantém o total do rodapé", async () => {
+        const wrapper = await mountSuspended(RSelect, {
+            props: { options: users, modelValue: 2, clearable: false, pick } as never
+        });
+
+        await open(wrapper);
+
+        expect(wrapper.text()).toContain("3 itens");
+    });
+});

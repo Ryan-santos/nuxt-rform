@@ -57,7 +57,7 @@
                     </div>
 
                     <button
-                        v-if="hasSelection && !props.disabled"
+                        v-if="canClear && hasSelection && !props.disabled"
                         type="button"
                         :aria-label="tr(props.text?.clear)"
                         :title="tr(props.text?.clear)"
@@ -259,6 +259,7 @@
                                     {{ countText }}
                                 </span>
                                 <button
+                                    v-if="canClear"
                                     type="button"
                                     :disabled="!hasSelection || props.disabled"
                                     :class="props.ui?.list?.footer?.clear"
@@ -293,10 +294,12 @@
      *
      * O painel termina num rodapé com o total de linhas — o da API, quando a fn
      * devolve `{ items, total }` — e um botão que esvazia a seleção; o mesmo X
-     * aparece no campo enquanto há algo escolhido.
+     * aparece no campo enquanto há algo escolhido. `clearable: false` recusa o
+     * gesto nos dois lugares, para o campo cujo model não admite vazio.
      *
      * @example <RSelect name="uf" :options="ufs" multiple search />
      * @example <RSelect name="form" :options :loading @search="buscar" />
+     * @example <RSelect name="idioma" :options="locales" :clearable="false" />
      */
     import {
         computed,
@@ -584,6 +587,8 @@
             modelFull?: ModelFull & boolean;
             multiple?: Multiple & boolean;
             search?: boolean;
+            /** Oferece o gesto de esvaziar — o X do campo e o botão do rodapé. */
+            clearable?: boolean;
             onSearch?: (term: string) => void;
             default?: ModelOf<Opts, KeyValue, ModelFull, Multiple>;
             modelValue?: ModelOf<Opts, KeyValue, ModelFull, Multiple>;
@@ -609,6 +614,7 @@
             modelFull?: boolean;
             multiple?: boolean;
             search?: boolean;
+            clearable?: boolean;
             onSearch?: (term: string) => void;
             default?: unknown;
             modelValue?: unknown;
@@ -631,12 +637,15 @@
     // ausente e um `:disabled="false"`. Este era o único campo sem `withDefaults`
     // nenhum — o `required` e o `loading` daqui continuam sendo castados. O `search`
     // entra pelo mesmo motivo: sem isso a prop ausente chegaria como `false` e
-    // apagaria um `defineFieldDefaults({ Select: { search: true } })`.
+    // apagaria um `defineFieldDefaults({ Select: { search: true } })`. O
+    // `clearable` idem, e ele ainda depende disso para o `!== false` distinguir
+    // "não declarei" de "declarei desligado".
     const _props = withDefaults(
         defineProps<Props<Opts, Multiple, KeyValue, KeyLabel, ModelFull>>(),
         {
             disabled: undefined,
             search: undefined,
+            clearable: undefined,
             resolve: undefined
         }
     );
@@ -1031,6 +1040,12 @@
     });
 
     const countText = computed(() => tr(withParams(props.value.text?.count, { n: count.value })));
+
+    // Fica **fora** do `defaults` e é lido como `!== false`, como o `focusError` do
+    // `RForm`: com a chave ausente o `resultValue` é falsy, a regra "não apaga" do
+    // `merger` nunca morde, e as duas direções passam — a tag e o
+    // `defineFieldDefaults`. É o que o `search`, morando no `defaults`, não tem.
+    const canClear = computed(() => props.value.clearable !== false);
 
     // `[]` em `multiple` e `null` no resto — nunca o `default`, que é o que um X
     // não quer de volta.

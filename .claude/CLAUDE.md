@@ -1891,7 +1891,7 @@ um `<Transition>` com `v-bind="ui.list.footer.transition"`, no molde do
 `RUtilsLoading`) e a barra com o total de linhas (`rows.length` — em remoto, o
 que já carregou) e o botão que esvazia a seleção. O mesmo `clear` é o X do campo,
 um `<button>` antes do chevron com `@click.stop` (senão o clique abre o painel),
-`v-if="hasSelection && !props.disabled"`.
+`v-if="canClear && hasSelection && !props.disabled"`.
 
 `clear` escreve `[]` em `multiple` e `null` no resto — **nunca o `default`**, que
 é o que um X não quer de volta. O slot `footer` substitui o rodapé inteiro e
@@ -1899,6 +1899,50 @@ recebe `{ status?, retry, count, clear }`.
 
 O plural do total é o `{n} item | {n} itens` do pack, pelo `withParams` — que
 saiu do `File.vue` para `#rform/utils` por ter ganhado o segundo call site.
+
+##### `clearable` fica fora do `defaults`, e é o que lhe dá as duas direções
+
+Uma prop só para os dois botões, e ela **não** entra no `defineDefaults` — é o
+padrão do `focusError` do `RForm`, e aqui ele compra mais do que evita. Com a
+chave ausente do `defaults` o `resultValue` do `merger` é `undefined`, a regra
+"não apaga" (que pula quando o resultado é truthy e o valor novo é falsy) nunca
+morde, e as quatro combinações passam:
+
+| escrito | `props.value.clearable` |
+|---|---|
+| nada | `undefined` → limpável |
+| `:clearable="false"` | `false` |
+| `defineFieldDefaults({ Select: { clearable: false } })` | `false` |
+| esse default **+** `:clearable="true"` na tag | `true` |
+
+Compare com o `search`, que mora no `defaults`: lá o `true` do app vence a tag, e
+desligar num campo só exigiria ler a prop crua. É a diferença entre semear o
+merger com um booleano e deixá-lo vazio — a issue #7 supunha que "fora dos
+defaults" custasse o `defineFieldDefaults`, e não custa: `defaults` só existe
+para semear, e o merger copia qualquer chave de `userDefaults`/`sourceProps` de
+qualquer jeito.
+
+`clearable: undefined` no `withDefaults`, junto de `disabled`/`search`/`resolve`:
+sem isso o boolean casting faz a prop **ausente** chegar como `false`, e aí o
+`!== false` não distingue "não declarei" de "declarei desligado".
+
+O computed chama-se `canClear`, e não `clearable`: prop e binding do `<script
+setup>` com o mesmo nome é a parede que o `search`/`term` já documenta.
+
+**Os dois `<button>` saem do DOM**, e não ficam escondidos por classe. O contorno
+que existia era `ui: { group: { clear: "hidden" }, list: { footer: { clear:
+"hidden" } } }` — dois lugares para dizer uma coisa só, com a intenção virando
+classe que um `defineFieldDefaults` futuro sobrescreve sem perceber. O do rodapé
+mantém o `:disabled="!hasSelection"` de hoje, que é outro estado: limpável, sem
+o que limpar.
+
+O slot `footer` **não** recebe `clearable`: quem substitui o rodapé inteiro sabe
+da própria intenção, e o `clear` continua lá.
+
+`required` ficou de fora de propósito — amarrar os dois mudaria calado o
+comportamento de quem já o usa hoje, e deixaria sem saída o campo que não é
+obrigatório e também não quer o botão (o seletor de idioma da issue, que nem está
+num `RForm`).
 
 #### `components/internal/` é uma terceira categoria
 
