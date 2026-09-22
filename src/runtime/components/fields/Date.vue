@@ -163,7 +163,7 @@
                     separator: "my-auto w-fit px-1 opacity-50"
                 },
                 trigger: `
-                    flex cursor-pointer p-3 transition-colors
+                    flex shrink-0 cursor-pointer p-3 transition-colors
                     hover:text-(--rf-color-primary)
                 `
             },

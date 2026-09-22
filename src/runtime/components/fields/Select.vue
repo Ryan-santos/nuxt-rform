@@ -434,10 +434,11 @@
                 },
                 // O X do campo: só com seleção, e nunca com `disabled`.
                 clear: `
-                    flex cursor-pointer p-3 pl-0 opacity-50 transition-opacity duration-300
+                    flex shrink-0 cursor-pointer p-3 pl-0 opacity-50 transition-opacity
+                    duration-300
                     hover:opacity-100
                 `,
-                icon: "m-3 ml-0"
+                icon: "shrink-0 m-3 ml-0"
             },
             list: {
                 search: {

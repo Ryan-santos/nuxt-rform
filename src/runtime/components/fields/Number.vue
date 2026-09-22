@@ -91,7 +91,7 @@
                     `
                 },
                 controls: `
-                    flex cursor-pointer p-3 transition-colors
+                    flex shrink-0 cursor-pointer p-3 transition-colors
                     hover:text-(--rf-color-primary)
                 `
             },

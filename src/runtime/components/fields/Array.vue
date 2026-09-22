@@ -78,7 +78,7 @@
                 item: {
                     container: "flex flex-row items-center gap-2",
                     remove: `
-                        cursor-pointer text-(--rf-color-contrast)/20 transition-all duration-300
+                        shrink-0 cursor-pointer text-(--rf-color-contrast)/20 transition-all duration-300
                         hover:text-(--rf-color-danger)
                     `
                 },
