@@ -1383,6 +1383,67 @@ O cast `el as HTMLInputElement` na construção é deliberado — `MaskaTarget` 
 
 **`v-mask` liga só no elemento onde está — não procura descendente.** O maska tem o fallback `querySelector("input")`, e ele é a causa de duas classes de bug: um wrapper (ou uma diretiva que o Vue repassa para a raiz de um componente) sequestra o campo que outro binding já possui, e `mounted`/`unmounted` resolvem nós diferentes, vazando listener. Resolver para `el` ou nada mantém todos os hooks falando do mesmo elemento a vida inteira do binding. Posto em elemento que não é campo, avisa no console em vez de falhar calado.
 
+### O elemento nativo liga por `:value` + `@input`, nunca por `v-model`
+
+Nenhum `<input>`, `<textarea>` ou `<select>` de campo ou util usa `v-model`. O
+binding é explícito, e o cast do `$event.target` mora num helper de `#rform/utils`
+para a regra "tipagem não entra no template" continuar valendo:
+
+```vue
+<input :value="model" @input="model = inputValue($event)" />
+<input type="checkbox" :checked="model" @change="model = inputChecked($event)" />
+```
+
+**Era a issue #6.** Um campo que monta dentro de um `<Suspense>` ainda pendente
+(a página do `NuxtPage`, com um `useFetch` `lazy` preenchendo o model no
+`transform`) e recebe o valor **antes** de o Suspense resolver aparecia vazio,
+com o `model` certo. O `mounted` de uma diretiva é post-render effect: dentro de
+um Suspense pendente ele vai para `suspense.effects` e só roda no `resolve` — mas
+a closure guarda o **vnode da montagem**, então o `vModelText.mounted` escrevia
+`el.value = ""` por cima do que o `beforeUpdate` já tinha posto. Reload direto
+não via, porque o valor chegava antes de o campo montar; navegação client-side
+via sempre. Com `:value` o valor é prop, patchada de forma síncrona no `patch`,
+sem hook adiado.
+
+É comportamento do Vue, não do módulo — mas o módulo é quem escolhe o binding.
+**Não é só `model`:** `typed[i]` do `RDate`/`RHour`, `hexInput` do `RColor` e
+`timeInputs[i]` do `RUtilsCalendar` são estado derivado do model e caíam na mesma
+janela; o `term` do `RSelect` entrou para a regra ser uma regra, e não uma lista.
+O `Pin` (`:value` + `@input`) e o `File` (`@change`) já eram assim.
+
+O que se perde do `vModelText`, aceito de propósito:
+
+- **IME** — o model recebe os valores intermediários da composição
+  (`compositionstart`/`compositionend` não são tratados). O DOM não é tocado,
+  porque o valor patchado é igual ao que está no input, então a composição em si
+  não quebra; num `@search` do `RSelect` cada passo dispara uma busca;
+- **o `.number`** — o cast que o `v-model` aplica a `type="number"` foi para o
+  `onInput` do `RNumber`, mirror do `looseToNumber`: o que parseia vira número, e
+  o `""` do campo limpo segue cru. Isso é deliberado: o `set` do `useField` faz
+  `?? value ?? cloneDefault()`, então um `null` ali viraria o `default` (`0`) e o
+  usuário não conseguiria apagar o campo. `test/nuxt/Number.test.ts` grava os três
+  casos (`3.5`, `0`, `""`).
+
+Em `RDate`/`RHour`, quem escreve em `typed` passou a ser o `onPartInput(index,
+event)` do `useRangeParts` — ele já era o listener de `input` da primeira parte,
+e escrever e marcar a tecla no mesmo lugar é o que mantém a ordem (a flag antes
+da escrita, para o watcher `post` de avanço enxergá-la).
+
+As guardas: `test/nuxt/suspense.test.ts` reproduz a janela de verdade — um
+`<Suspense>` interno seguro por um irmão assíncrono, o model escrito no meio, o
+input lido no ramo pendente (`suspense.pendingBranch.el`) antes e depois do
+resolve — para `Text`, `Textarea`, `Number`, `Switch`, `Date` e `Hour` (com
+`v-model`, os oito falham com `""`). Os inputs de painel (`Color`, `Calendar`,
+`Select`) **não** entram ali: sob o stub de Teleport dos testes o painel é
+remontado depois da escrita, e o vnode novo já nasce certo — o caso passaria com
+ou sem correção. Quem os cobre é a guarda estática de
+`test/unit/templates.test.ts`, que varre os componentes do módulo e os
+`app/rform/{fields,utils}` do repo e reprova qualquer `v-model` numa tag nativa.
+
+Vale para campo de usuário também: um `.vue` em `app/rform/fields` com
+`<input v-model="model">` tem exatamente o mesmo bug, e `inputValue` está no
+barrel por isso.
+
 ### Props genéricos booleanos: use `T & boolean`
 
 Vue compila `defineProps<{ multiple?: Multiple }>()` (onde `Multiple extends boolean`) com `multiple: { type: null }` em runtime. Sem `type: Boolean`, `<RSelect multiple>` chega como `""` (string vazia, falsy). **Solução:** declarar como `multiple?: Multiple & boolean` — a interseção força o compilador SFC a emitir `type: Boolean` mantendo o generic para inferência de tipos do slot.

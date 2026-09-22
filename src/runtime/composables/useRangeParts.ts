@@ -1,5 +1,7 @@
 import { watch, type Ref, type ShallowRef } from "vue";
 
+import { inputValue } from "#rform/utils";
+
 export type RangePartsOptions = {
     /** O container das duas partes; é dele que sai a ordem do DOM. */
     field: Readonly<ShallowRef<HTMLElement | null>>;
@@ -12,16 +14,16 @@ export type RangePartsOptions = {
 };
 
 export type RangeParts = {
-    onPartInput: () => void;
+    onPartInput: (index: 0 | 1, event: Event) => void;
     onPartKeydown: (event: KeyboardEvent) => void;
     onFieldMousedown: (event: MouseEvent) => void;
 };
 
 /**
- * Navegação entre as duas partes de um campo range: avança sozinho quando a
- * primeira fica completa, volta no Backspace, e roteia o clique que cai fora dos
- * inputs. Compartilhado pelo `RDate` e pelo `RHour`, que só diferem em como leem
- * o modo e o que consideram um valor completo.
+ * As duas partes de um campo range: escreve o que se digita em `typed`, avança
+ * sozinho quando a primeira fica completa, volta no Backspace, e roteia o clique que
+ * cai fora dos inputs. Compartilhado pelo `RDate` e pelo `RHour`, que só diferem em
+ * como leem o modo e o que consideram um valor completo.
  *
  * @example
  * const { onPartInput, onPartKeydown, onFieldMousedown } = useRangeParts({
@@ -30,6 +32,7 @@ export type RangeParts = {
  *     isRange: () => props.value.mode === "range",
  *     valid: (part) => !!parseLocal(part)
  * });
+ * // <input :value="typed[0]" @input="onPartInput(0, $event)" />
  */
 export default function useRangeParts({
     field,
@@ -65,8 +68,13 @@ export default function useRangeParts({
     );
 
     return {
-        onPartInput: () => {
-            typedByUser = true;
+        // Por `:value` + `@input`, e não `v-model` (ver `inputValue`). Só a primeira
+        // parte avança sozinha, então só ela marca a tecla.
+        onPartInput: (index, event) => {
+            if (index === 0) {
+                typedByUser = true;
+            }
+            typed.value[index] = inputValue(event);
         },
 
         onPartKeydown: (event) => {

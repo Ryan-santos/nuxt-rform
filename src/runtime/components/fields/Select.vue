@@ -86,11 +86,12 @@
                         :class="props.ui?.list?.search?.icon"
                     />
                     <input
-                        v-model="term"
+                        :value="term"
                         :disabled="props.disabled"
                         type="search"
                         :placeholder="tr(props.text?.search)"
                         :class="props.ui?.list?.search?.input"
+                        @input="term = inputValue($event)"
                     />
                 </div>
                 <div :class="props.ui?.list?.container">
@@ -326,6 +327,7 @@
         fnProp,
         getProperty,
         icon,
+        inputValue,
         keyOf,
         normalizeOptions,
         withParams

@@ -13,13 +13,14 @@
             <div :class="props.ui?.group?.field?.container">
                 <RUtilsPlaceholder v-if="props.placeholder" />
                 <textarea
-                    v-model="model"
+                    :value="model"
                     v-mask="mask"
                     :autocomplete="props.autocomplete"
                     :disabled="props.disabled"
                     :name="String(props.name)"
                     :rows="props.rows"
                     :class="props.ui?.group?.field?.textarea"
+                    @input="model = inputValue($event)"
                 />
             </div>
 
@@ -51,8 +52,7 @@
     import type { Autocomplete, Element } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
     import type { Mask } from "#rform/types/presets";
-    import { defineDefaults } from "#rform/utils";
-    import { vMask } from "#rform/utils";
+    import { defineDefaults, inputValue, vMask } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {

@@ -22,13 +22,14 @@
             <div :class="props.ui?.group?.field?.container">
                 <RUtilsPlaceholder v-if="props.placeholder" />
                 <input
-                    v-model="model"
+                    :value="model"
                     :autocomplete="props.autocomplete"
                     :disabled="props.disabled"
                     :name="String(props.name)"
                     type="number"
                     inputmode="numeric"
                     :class="props.ui?.group?.field?.input"
+                    @input="onInput"
                 />
             </div>
 
@@ -65,7 +66,7 @@
     import { useField } from "#rform/composables";
     import type { Autocomplete, Element } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, icon } from "#rform/utils";
+    import { defineDefaults, icon, inputValue } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {
@@ -132,6 +133,15 @@
             return value;
         }
     });
+
+    // O cast que o `v-model` fazia num `type="number"`: o que parseia vira número, e
+    // o resto (o `""` do campo limpo) segue cru — é o que o `set` de cima já esperava,
+    // e é o que deixa apagar o campo sem o `default` voltar por cima.
+    const onInput = (event: Event) => {
+        const raw = inputValue(event);
+        const parsed = Number.parseFloat(raw);
+        model.value = (Number.isNaN(parsed) ? raw : parsed) as number | null;
+    };
 
     const increase = () => {
         const value = model.value || 0;

@@ -37,7 +37,7 @@
                         >
                             <input
                                 v-if="props.mode === 'multiple'"
-                                v-model="typed[0]"
+                                :value="typed[0]"
                                 :autocomplete="props.autocomplete"
                                 :disabled="props.disabled"
                                 :name="String(props.name)"
@@ -48,7 +48,7 @@
                             />
                             <input
                                 v-else
-                                v-model="typed[0]"
+                                :value="typed[0]"
                                 v-mask="mask"
                                 :autocomplete="props.autocomplete"
                                 :disabled="props.disabled"
@@ -57,14 +57,14 @@
                                 :placeholder="placeholderHint"
                                 :class="props.ui?.group?.field?.input"
                                 @blur="validate(0)"
-                                @input="onPartInput"
+                                @input="onPartInput(0, $event)"
                             />
                             <template v-if="props.mode === 'range'">
                                 <span :class="props.ui?.group?.field?.separator">
                                     {{ tr(props.text?.separator) }}
                                 </span>
                                 <input
-                                    v-model="typed[1]"
+                                    :value="typed[1]"
                                     v-mask="mask"
                                     :disabled="props.disabled"
                                     :name="String(props.name)"
@@ -75,6 +75,7 @@
                                         props.ui?.group?.field?.inputEnd
                                     ]"
                                     @blur="validate(1)"
+                                    @input="onPartInput(1, $event)"
                                     @keydown="onPartKeydown"
                                 />
                             </template>

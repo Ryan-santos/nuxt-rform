@@ -138,13 +138,13 @@
                     }}
                 </span>
                 <input
-                    v-model="timeInputs[idx]"
+                    :value="timeInputs[idx]"
                     v-mask="timeMask"
                     type="text"
                     inputmode="numeric"
                     :placeholder="tr('rform.fields.hour.hint')"
                     :class="props.ui?.time?.input"
-                    @input="onTimeInput(idx)"
+                    @input="onTimeInput(idx, $event)"
                     @blur="commitTime(idx)"
                     @keydown.enter.prevent="commitTime(idx)"
                 />
@@ -163,7 +163,7 @@
 
     import { useUtil } from "#rform/composables";
     import type { DeepPartial, TextProp } from "#rform/types";
-    import { dateFormat, defineDefaults, vMask, icon } from "#rform/utils";
+    import { dateFormat, defineDefaults, inputValue, vMask, icon } from "#rform/utils";
 
     import { formatTime, pad, parseTime } from "../fields/Hour.vue";
 
@@ -796,7 +796,9 @@
         writeSingle(d);
     };
 
-    const onTimeInput = (idx: number) => {
+    const onTimeInput = (idx: number, event: Event) => {
+        timeInputs.value[idx] = inputValue(event);
+
         if (parseTime(timeInputs.value[idx])) {
             commitTime(idx);
         }

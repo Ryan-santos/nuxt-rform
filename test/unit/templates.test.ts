@@ -116,3 +116,66 @@ describe("tipagem não entra no template", () => {
         expect(found).toEqual([]);
     });
 });
+
+/**
+ * `v-model` não liga elemento nativo — ver "O elemento nativo liga por `:value` +
+ * `@input`" no `.claude/CLAUDE.md`. O `mounted` do `vModelText` é post-render
+ * effect: um Suspense pendente o represa e, ao resolver, ele reaplica o valor do
+ * vnode da montagem por cima do que chegou no meio (issue #6).
+ */
+
+const FIELD_ROOTS = [
+    path.join("src", "runtime", "components"),
+    path.join("docs", "app", "rform"),
+    path.join("playgrounds", "i18n", "app", "rform"),
+    path.join("test", "fixtures", "basic", "rform")
+];
+
+/** Toda tag nativa de formulário com `v-model`, com a linha em que a tag abre. */
+const nativeModels = (text: string) => {
+    const found: { number: number; tag: string }[] = [];
+    const pattern = /<(input|textarea|select)\b[^>]*>/g;
+
+    for (const match of text.matchAll(pattern)) {
+        if (/\sv-model(?:[:.][\w.]+)?=/.test(match[0])) {
+            found.push({
+                number: text.slice(0, match.index).split(/\r?\n/).length,
+                tag: match[1]!
+            });
+        }
+    }
+
+    return found;
+};
+
+describe("`v-model` não liga elemento nativo", () => {
+    it("nenhum `<input>`, `<textarea>` ou `<select>` de campo ou util usa `v-model`", async () => {
+        const offenses: string[] = [];
+
+        for (const root of FIELD_ROOTS) {
+            for (const file of await files(root)) {
+                for (const { number, tag } of nativeModels(await readFile(file, "utf8"))) {
+                    offenses.push(`${file}:${number}: <${tag} v-model>`);
+                }
+            }
+        }
+
+        expect(offenses).toEqual([]);
+    });
+
+    it("enxerga o `v-model` numa tag de várias linhas, e ignora o de componente", () => {
+        const sample = [
+            "<template>",
+            '    <RUtilsDropdown v-model:open="open">',
+            "        <input",
+            '            v-model="model"',
+            '            type="text"',
+            "        />",
+            '        <textarea :value="model" />',
+            "    </RUtilsDropdown>",
+            "</template>"
+        ].join("\n");
+
+        expect(nativeModels(sample)).toEqual([{ number: 3, tag: "input" }]);
+    });
+});

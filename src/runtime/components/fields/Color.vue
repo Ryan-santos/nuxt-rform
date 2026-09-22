@@ -79,11 +79,12 @@
                         :style="`background-color: ${model || 'transparent'}`"
                     />
                     <input
-                        v-model="hexInput"
+                        :value="hexInput"
                         :disabled="props.disabled"
                         :class="props.ui?.picker?.input"
                         maxlength="7"
                         spellcheck="false"
+                        @input="hexInput = inputValue($event)"
                         @blur="commitHex"
                         @keydown.enter.prevent="commitHex"
                     />
@@ -107,7 +108,7 @@
     import { useField } from "#rform/composables";
     import type { Element } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults } from "#rform/utils";
+    import { defineDefaults, inputValue } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {

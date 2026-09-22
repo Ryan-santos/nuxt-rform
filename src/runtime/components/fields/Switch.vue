@@ -12,10 +12,11 @@
 
             <span :class="props.ui?.group?.button?.container">
                 <input
-                    v-model="model"
+                    :checked="model"
                     :disabled="props.disabled"
                     type="checkbox"
                     :class="props.ui?.group?.button?.input"
+                    @change="model = inputChecked($event)"
                 />
                 <span :class="props.ui?.group?.button?.indicator">
                     <Transition
@@ -54,7 +55,7 @@
     import { useField } from "#rform/composables";
     import type { Element } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, icon } from "#rform/utils";
+    import { defineDefaults, icon, inputChecked } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {
