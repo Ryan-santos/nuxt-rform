@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.3.2
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.1...v0.3.2)
+
+### 🩹 Fixes
+
+- Ligando o elemento nativo por :value em vez de v-model ([7347259](https://github.com/Ryan-santos/nuxt-rform/commit/7347259))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.1
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.0...v0.3.1)
