@@ -1,6 +1,6 @@
 {
     "name": "nuxt-rform",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "description": "Composable form fields for Nuxt: the model, the types and the validation all come from the field itself. Zod rules, input masks, dynamic schemas and i18n included.",
     "keywords": [
         "nuxt",

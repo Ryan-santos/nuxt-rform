@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.3.4
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.3...v0.3.4)
+
+### 🔥 Performance
+
+- Tirando todo campo do Suspense ([485c73e](https://github.com/Ryan-santos/nuxt-rform/commit/485c73e))
+
+### 🎨 Styles
+
+- Impedindo ícones espremidos ([8b6276a](https://github.com/Ryan-santos/nuxt-rform/commit/8b6276a))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.3
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.2...v0.3.3)
