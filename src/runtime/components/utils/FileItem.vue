@@ -168,7 +168,7 @@
         remove: [];
     }>();
 
-    const { props, tr } = useUtil<Props>(defaults);
+    const { props, tr } = useUtil<Props>();
 
     const IMAGES = /\.(?:jpe?g|png|gif|bmp|tiff?|webp|svg|avif)(?:$|[?#])/i;
 

@@ -179,3 +179,51 @@ describe("`v-model` não liga elemento nativo", () => {
         expect(nativeModels(sample)).toEqual([{ number: 3, tag: "input" }]);
     });
 });
+
+/**
+ * As duas composables são síncronas, e o `defaults` chega pelo vite plugin. Um
+ * `await` de volta numa delas devolve o componente ao Suspense, e aí o `setRef` do
+ * pai roda antes de o `defineExpose` existir (issue #8) e o `rulesList` fica
+ * incompleto no mount. Ver "O `RForm` não pode ser async" no `.claude/CLAUDE.md`.
+ */
+const awaited = (text: string) => {
+    const found: { number: number; call: string }[] = [];
+
+    for (const match of text.matchAll(/\bawait\s+(useField|useUtil)\b/g)) {
+        found.push({
+            number: text.slice(0, match.index).split(/\r?\n/).length,
+            call: match[1]!
+        });
+    }
+
+    return found;
+};
+
+describe("nenhum campo ou util abre dependência de Suspense", () => {
+    it("nenhum `.vue` aguarda `useField` ou `useUtil`", async () => {
+        const offenses: string[] = [];
+
+        for (const root of FIELD_ROOTS) {
+            for (const file of await files(root)) {
+                for (const { number, call } of awaited(await readFile(file, "utf8"))) {
+                    offenses.push(`${file}:${number}: await ${call}()`);
+                }
+            }
+        }
+
+        expect(offenses).toEqual([]);
+    });
+
+    it("enxerga o `await` de volta, e não confunde com um await vizinho", () => {
+        const sample = [
+            "    const { props } = await useUtil<Props>();",
+            "    const loaded = await load();",
+            "    const { model } = await useField(_props);"
+        ].join("\n");
+
+        expect(awaited(sample)).toEqual([
+            { number: 1, call: "useUtil" },
+            { number: 3, call: "useField" }
+        ]);
+    });
+});

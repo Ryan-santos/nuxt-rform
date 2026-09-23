@@ -676,7 +676,7 @@
         }): void;
     }>();
 
-    const { model, props, tr } = await useField(_props as unknown as InternalProps);
+    const { model, props, tr } = useField(_props as unknown as InternalProps);
 
     // Por caminho relativo, como o `Form.vue` faz: o barrel `#rform/composables` só
     // reexporta o default de cada arquivo.

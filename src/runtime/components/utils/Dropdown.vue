@@ -196,7 +196,7 @@
 
     const open = defineModel<boolean>("open", { default: false });
 
-    const { props } = useUtil<Props>(defaults);
+    const { props } = useUtil<Props>();
 
     // O popover fica na árvore (o `useFloating` precisa do ref), mas o conteúdo
     // espera o primeiro `open` — um `RDate` fechado renderizava um mês inteiro.

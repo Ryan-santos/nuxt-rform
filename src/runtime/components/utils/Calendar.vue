@@ -351,7 +351,7 @@
 </script>
 
 <script setup lang="ts">
-    const { props, upper, tr, locale } = useUtil<Props>(defaults);
+    const { props, upper, tr, locale } = useUtil<Props>();
 
     const mode = computed<Mode>(() => props.value.mode ?? "single");
 

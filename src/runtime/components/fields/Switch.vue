@@ -112,7 +112,7 @@
         loading: undefined
     });
 
-    const { model, props, tr } = await useField(_props);
+    const { model, props, tr } = useField(_props);
 
     const iconDefaults: Required<IconConfig> = {
         loading: icon("loading"),

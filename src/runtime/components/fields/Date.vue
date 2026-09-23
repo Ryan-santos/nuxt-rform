@@ -228,7 +228,7 @@
         loading: undefined
     });
 
-    const { model, props, tr } = await useField(_props as unknown as InternalProps);
+    const { model, props, tr } = useField(_props as unknown as InternalProps);
 
     // Máscara, regex de parse e exibição saem todas do `formats.date` do pack ativo.
     // `computed` porque `tr` lê o locale a cada chamada, então trocar de idioma

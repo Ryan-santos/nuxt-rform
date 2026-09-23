@@ -4,20 +4,24 @@ import {
     onUnmounted,
     provide,
     ref,
-    shallowRef,
     useModel,
     watch,
     type ComputedRef,
     type InjectionKey,
-    type ModelRef
+    type ModelRef,
+    type Ref
 } from "vue";
 
 import userDefaults from "#rform/defaults";
+// Estático, e é o que mantém a composable síncrona: uma mask não importa zod, então
+// ela não paga o import dinâmico que as rules obrigam.
+import { masks } from "#rform/masks";
 import { components as registry, hooks } from "#rform/registry";
 import type { Element } from "#rform/types";
 import type Components from "#rform/types/components";
-import { hookUi, merger, prefixText, resolveMask, resolveRule } from "#rform/utils";
+import { hookUi, merger, prefixText, resolveMask, resolveRule, type MaskRef } from "#rform/utils";
 
+import type { Tr } from "../utils/i18n";
 import { injectErrorsBag } from "./errorsBag";
 import { injectFormRoot } from "./formRoot";
 import { injectRulesList } from "./rulesList";
@@ -48,27 +52,50 @@ export type ValueProp<T extends object = object> = {
 
 export const keyProp = Symbol() as InjectionKey<ValueProp>;
 
+/** O que a composable devolve. */
+export type FieldContext<T extends Element, S = T["modelValue"], G = T["modelValue"]> = {
+    id: string | null;
+    upper: Value | undefined;
+    model: ModelRef<T["modelValue"], string, G, S>;
+    mask: ComputedRef<MaskRef | undefined>;
+    props: ComputedRef<FieldProps<T>>;
+    tr: Tr;
+    locale: Ref<string>;
+};
+
+type Options<T extends Element, S, G> = {
+    set?: (value: T["modelValue"]) => S;
+    get?: (value: T["modelValue"]) => G;
+};
+
+/**
+ * O que o `src/vite.plugin.ts` escreve na chamada: o nome do arquivo e o `defaults`
+ * que o componente declara ao lado. `defaults` é opcional — nem todo componente o
+ * declara, e aí a chave não sai.
+ */
+export type Injected<N, D> = {
+    name: N;
+    defaults?: D;
+};
+
 /**
  * A composable de todo campo: resolve props, model, máscara, validação e tradução.
  * Havendo Form pai e `props.name`, o model lê e escreve direto em
  * `upper.model.value[name]`. Ver "useField" no `.claude/CLAUDE.md`.
  *
- * @example const { id, model, props, tr } = await useField(_props);
+ * @example const { id, model, props, tr } = useField(_props);
  */
-export default async function <T extends Element, S = T["modelValue"], G = T["modelValue"]>(
+export default function useField<T extends Element, S = T["modelValue"], G = T["modelValue"]>(
     sourceProps: T,
-    opts?: {
-        set?: (value: T["modelValue"]) => S;
-        get?: (value: T["modelValue"]) => G;
-    },
-    /** Injetado pelo vite plugin, a partir do nome do arquivo do componente. */
-    componentName?: keyof Components
-) {
+    opts?: Options<T, S, G>,
+    /** Escrito pelo vite plugin, nunca pelo campo. */
+    injected?: Injected<keyof Components, Element>
+): FieldContext<T, S, G> {
     // Sem fallback: cair no nome de outro componente renderiza o campo com os
     // defaults errados e nunca diz nada.
-    if (!componentName || !(componentName in registry)) {
+    if (!injected?.name || !registry.has(injected.name)) {
         throw new Error(
-            `[rform] useField could not resolve a component name${componentName ? ` (got "${componentName}")` : ""}. A field has to live in the module's own components directory or in app/rform/fields for the build to inject it.`
+            `[rform] useField could not resolve a component name${injected?.name ? ` (got "${injected.name}")` : ""}. A field has to live in the module's own components directory or in app/rform/fields for the build to inject it.`
         );
     }
 
@@ -76,8 +103,12 @@ export default async function <T extends Element, S = T["modelValue"], G = T["mo
     // usuário em `app/rform/fields`.
     const { tr, locale } = useTranslate();
 
-    const defaults = shallowRef<Element>({});
-    const overrides = userDefaults[componentName];
+    // Prefixado **antes** do merger: é o que dá procedência de graça ao texto. Já
+    // pronto aqui, e não num ref preenchido depois, então o `props` nasce completo e
+    // o watcher de seed enxerga o `default` de verdade na primeira passada.
+    const defaults = prefixText(injected.defaults ?? {}, injected.name, "fields") as Element;
+
+    const overrides = userDefaults[injected.name];
 
     const localProps = ref<Element>({});
 
@@ -87,15 +118,10 @@ export default async function <T extends Element, S = T["modelValue"], G = T["mo
 
     // Ausente em `Form` e `Dynamic`: o mapa gerado só lista o que saiu de um
     // diretório `fields`.
-    const hook = (hooks.fields as Record<string, string | undefined>)[componentName];
+    const hook = (hooks.fields as Record<string, string | undefined>)[injected.name];
 
     const props = computed(() => {
-        const merged = merger(
-            defaults.value,
-            overrides,
-            localProps.value,
-            sourceProps
-        ) as FieldProps<T>;
+        const merged = merger(defaults, overrides, localProps.value, sourceProps) as FieldProps<T>;
 
         // A tradução acontece aqui, na fronteira do call site: um segundo `tr` sobre a
         // mensagem do bag a levaria ao `t` do app e cairia no aviso de *missing key*.
@@ -206,9 +232,6 @@ export default async function <T extends Element, S = T["modelValue"], G = T["mo
     const rulesList = injectRulesList();
     const formRoot = injectFormRoot();
 
-    // Antes do primeiro `await` deste arquivo, e por isso aqui: depois dele a
-    // instância corrente já não é a do componente, e `onUnmounted` vira no-op.
-    //
     // Sem isto, uma linha removida de um `RArray` deixa uma rule órfã reprovando o
     // submit sobre um model já descartado.
     onUnmounted(() => {
@@ -228,58 +251,33 @@ export default async function <T extends Element, S = T["modelValue"], G = T["mo
         { immediate: true, flush: "sync" }
     );
 
-    const field = componentName.toLowerCase();
+    const field = injected.name.toLowerCase();
 
-    // Import dinâmico para manter zod fora do caminho crítico de uma página sem
-    // validação (ver "useField" no `.claude/CLAUDE.md`).
-    const presets = shallowRef<typeof import("#rform/presets") | undefined>();
-
-    const loadPresets = async () => {
-        presets.value ??= await import("#rform/presets");
-        return presets.value;
-    };
-
-    const declaresPreset = () => {
-        const current = props.value as { mask?: unknown; rule?: unknown };
-        return current.mask !== undefined || current.rule !== undefined;
-    };
-
-    if (declaresPreset()) {
-        await loadPresets();
-    }
-
+    // As masks são estáticas, então o `mask` está certo já no primeiro render — sem a
+    // carga ansiosa que obrigava o `setup` a ser async.
     const mask = computed(() =>
-        resolveMask(
-            (props.value as { mask?: Parameters<typeof resolveMask>[0] }).mask,
-            presets.value?.masks ?? {}
-        )
+        resolveMask((props.value as { mask?: Parameters<typeof resolveMask>[0] }).mask, masks)
     );
+
+    // Só as rules ficam no import dinâmico: são elas que trazem zod, e mantê-lo fora
+    // do caminho crítico de uma página sem validação é o ponto.
+    let rules: (typeof import("#rform/presets"))["rules"] | undefined;
+
+    const loadRules = async () => {
+        rules ??= (await import("#rform/presets")).rules;
+        return rules;
+    };
 
     watch(
         () => props.value.rule,
-        async (rule) => {
+        (rule) => {
             if (!id) {
                 return;
             }
 
-            const loaded = rule === undefined ? presets.value : await loadPresets();
-
-            const validate = resolveRule(rule, loaded?.rules ?? {}, field);
-
-            if (validate) {
-                // Só devolve a mensagem: quem a escreve no campo é o `errorsBag`.
-                const fn = async () => {
-                    try {
-                        localProps.value.loading = true;
-
-                        return await validate(model.value, formRoot?.value);
-                    } finally {
-                        localProps.value.loading = undefined;
-                    }
-                };
-
-                rulesList?.value?.set(id, fn);
-            } else {
+            // A única saída de `resolveRule` sem validador, e por isso a decisão cabe
+            // aqui, síncrona: todo o resto ou resolve ou lança.
+            if (rule === null || rule === undefined) {
                 error.value = undefined;
 
                 if (errorsBag && id in errorsBag.value) {
@@ -287,27 +285,43 @@ export default async function <T extends Element, S = T["modelValue"], G = T["mo
                 }
 
                 rulesList?.value?.delete(id);
+                return;
             }
+
+            // Resolvido já aqui, para um preset inexistente falhar no mount e não só
+            // no submit — e o `set` abaixo é **síncrono**, porque o `rulesList` precisa
+            // estar completo quando o campo monta: com o `ref` do template em pé
+            // (issue #8), um `form.validate()` logo depois passaria por cima da rule.
+            const resolved = loadRules().then((table) => resolveRule(rule, table, field));
+
+            // O `fn` relança ao validar, mas pode nunca rodar — sem um dono aqui, um
+            // typo de preset vira unhandled rejection solta. Ver "useField" no
+            // `.claude/CLAUDE.md`.
+            resolved.catch((cause: unknown) => console.error(cause));
+
+            // Só devolve a mensagem: quem a escreve no campo é o `errorsBag`.
+            const fn = async () => {
+                const validate = await resolved;
+
+                if (!validate) {
+                    return;
+                }
+
+                try {
+                    localProps.value.loading = true;
+
+                    return await validate(model.value, formRoot?.value);
+                } finally {
+                    localProps.value.loading = undefined;
+                }
+            };
+
+            rulesList?.value?.set(id, fn);
         },
         {
             immediate: true
         }
     );
-
-    // Pelo registry gerado, não por import dinâmico relativo: este compila num glob
-    // ancorado neste arquivo, do qual `app/rform/fields` não faz parte.
-    const load = registry[componentName as keyof typeof registry] as () => Promise<{
-        defaults?: Element;
-    }>;
-
-    // Prefixado **antes** do merger: é o que dá procedência de graça ao texto.
-    defaults.value = prefixText((await load())?.defaults ?? {}, componentName, "fields") as Element;
-
-    // O watch acima já rodou, mas com `defaults.value` ainda vazio — e ele não se
-    // corrige sozinho: a fonte foi de `undefined` a `undefined`, que não é mudança.
-    if (currentValue() === undefined) {
-        seed();
-    }
 
     return {
         id,

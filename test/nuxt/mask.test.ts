@@ -15,6 +15,20 @@ const typeInto = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => 
 };
 
 describe("mask no RText", () => {
+    // Sem `await` nenhum entre montar e ler: as masks são importadas estaticamente,
+    // então o preset já está resolvido no primeiro render. Antes elas vinham do
+    // `#rform/presets`, e esperá-las era o último motivo de o `setup` ser async — o
+    // nome cru iria para o maska por um tique. Ver "useField" no `.claude/CLAUDE.md`.
+    it("resolve o preset já no primeiro render, sem passar por um tique", () => {
+        const wrapper = mount(RText, {
+            props: { mask: "brCpf", modelValue: "" } as never
+        });
+
+        // `mount` síncrono e nenhum `await` até aqui: com o preset ainda por carregar,
+        // o maska teria recebido a string "brCpf" como pattern, toda de literais.
+        expect(typeInto(wrapper.find("input").element, "52998224725")).toBe("529.982.247-25");
+    });
+
     it("formata por nome de preset", async () => {
         const wrapper = await mountSuspended(RText, {
             props: { mask: "brCpf", modelValue: "" } as never

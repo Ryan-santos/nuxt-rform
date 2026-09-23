@@ -33,5 +33,5 @@
 </script>
 
 <script setup lang="ts">
-    const { props } = await useUtil<Props>();
+    const { props } = useUtil<Props>();
 </script>

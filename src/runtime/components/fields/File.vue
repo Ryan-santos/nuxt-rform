@@ -258,7 +258,7 @@
         empty?(props: { accept: string[] }): void;
     }>();
 
-    const { id, model, props, tr } = await useField(_props as unknown as InternalProps, {
+    const { id, model, props, tr } = useField(_props as unknown as InternalProps, {
         // `defaults.default` é estático (`null`), então a normalização para lista mora
         // aqui — o seam que já existe. Sem ela o seed entrega `null` onde o modo
         // múltiplo espera array. `_props.multiple` é a prop crua, antes do merger.

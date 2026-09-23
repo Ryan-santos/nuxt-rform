@@ -185,6 +185,39 @@ export default defineNuxtModule<ModuleOptions>({
         const importer = (template: string) => (component: ComponentFile) =>
             `import(${relativeSpecifier(template, filePath(component))}).Props`;
 
+        /**
+         * O que o vite plugin escreve na chamada não passa pelo `vue-tsc`: ele lê o SFC
+         * **antes** da reescrita, então o `defaults` injetado não seria conferido contra
+         * o parâmetro que o recebe. Estas linhas são esse check.
+         *
+         * Moram aqui porque este template já importa todo componente **e** é `.ts`: num
+         * `.d.ts` elas não valeriam nada, já que o `skipLibCheck` do Nuxt não olha para
+         * declaration file — medido, uma asserção falsa lá passa batida.
+         *
+         * O **nome** fica de fora de propósito: o plugin o tira do basename e o
+         * `collectComponents` também, então a asserção seria tautologia.
+         */
+        const injected = (template: string, list: ComponentFile[]) => [
+            "",
+            "// Quem não declara `defaults` recebe `undefined` do plugin, e é caso",
+            "// suportado; quem declara tem de caber em `Base`, que é o que o",
+            "// `defineDefaults` promete a quem o usa — e o que ninguém promete a quem não.",
+            `type Base = import(${specifier(resolve("runtime/type"))}).Base`,
+            "type Injected<M> = M extends { defaults: infer D }",
+            '    ? ([D] extends [Base] ? true : { "[rform] defaults must satisfy Base: use defineDefaults()": D })',
+            "    : true",
+            "type Assert<T extends true> = T",
+            "",
+            "export type Checked = [",
+            list
+                .map(
+                    (component) =>
+                        `    Assert<Injected<typeof import(${relativeSpecifier(template, filePath(component))})>>`
+                )
+                .join(",\n"),
+            "]"
+        ];
+
         const componentsTypes = `${name}/types/components/index.ts`;
 
         addTemplate({
@@ -203,7 +236,8 @@ export default defineNuxtModule<ModuleOptions>({
                     "export default interface All {",
                     `   ${components.map(({ name }) => `${name}: ${name}`).join("\n       ")}`,
                     "   Utils: Utils",
-                    "}"
+                    "}",
+                    ...injected(componentsTypes, components)
                 ].join("\n")
         });
 
@@ -223,7 +257,8 @@ export default defineNuxtModule<ModuleOptions>({
                     "",
                     "export default interface All {",
                     `   ${utils.map(({ name }) => `${name}: ${name}`).join("\n    ")}`,
-                    "}"
+                    "}",
+                    ...injected(utilsTypes, utils)
                 ].join("\n")
         });
 
@@ -264,12 +299,7 @@ export default defineNuxtModule<ModuleOptions>({
             write: true,
             getContents: () => {
                 const record = (list: ComponentFile[]) =>
-                    list
-                        .map(
-                            (component) =>
-                                `    ${component.name}: () => import(${specifier(filePath(component))})`
-                        )
-                        .join(",\n");
+                    list.map(({ name }) => `    ${JSON.stringify(name)}`).join(",\n");
 
                 /**
                  * A classe-gancho que cada campo e util carrega. Gerada aqui, e não
@@ -286,14 +316,14 @@ export default defineNuxtModule<ModuleOptions>({
                         .join(",\n");
 
                 return [
-                    "// gerado — nome do componente → módulo, para buscar os defaults em runtime",
-                    "export const components = {",
+                    "// gerado — os nomes que o build conhece, e a classe-gancho de cada um",
+                    "export const components: ReadonlySet<string> = new Set([",
                     record(components),
-                    "};",
+                    "]);",
                     "",
-                    "export const utils = {",
+                    "export const utils: ReadonlySet<string> = new Set([",
                     record(utils),
-                    "};",
+                    "]);",
                     "",
                     "// a classe que cada um carrega, para os resets do style.css",
                     "export const hooks = {",
@@ -490,46 +520,57 @@ export default defineNuxtModule<ModuleOptions>({
             return [...merged];
         };
 
+        const presetLines = (kind: "rules" | "masks", entries: Array<[string, string]>) => {
+            const prefix = kind === "rules" ? "_rule" : "_mask";
+
+            return {
+                imports: entries.map(
+                    ([, path], index) => `import ${prefix}${index} from ${specifier(path)};`
+                ),
+                record: entries
+                    .map(([preset], index) => `    ${JSON.stringify(preset)}: ${prefix}${index}`)
+                    .join(",\n")
+            };
+        };
+
+        // Num template à parte porque é o único que o `useField` importa de forma
+        // **estática**: uma mask não toca em zod, e o zod das rules é o que obriga o
+        // resto a ser dinâmico. Ver "As masks são estáticas" no `.claude/CLAUDE.md`.
+        addTemplate({
+            filename: `${name}/masks.ts`,
+            write: true,
+            getContents: async () => {
+                const masks = presetLines("masks", await presetsOf("masks"));
+
+                return [
+                    "// auto-generated — mask presets discovered on disk",
+                    ...masks.imports,
+                    "",
+                    "export const masks = {",
+                    masks.record,
+                    "};",
+                    "",
+                    "export default masks;"
+                ].join("\n");
+            }
+        });
+
         addTemplate({
             filename: `${name}/presets.ts`,
             write: true,
             getContents: async () => {
-                const kinds = {
-                    rules: await presetsOf("rules"),
-                    masks: await presetsOf("masks")
-                };
-
-                const lines = (kind: "rules" | "masks") => {
-                    const prefix = kind === "rules" ? "_rule" : "_mask";
-
-                    return {
-                        imports: kinds[kind].map(
-                            ([, path], index) => `import ${prefix}${index} from ${specifier(path)};`
-                        ),
-                        record: kinds[kind]
-                            .map(
-                                ([preset], index) =>
-                                    `    ${JSON.stringify(preset)}: ${prefix}${index}`
-                            )
-                            .join(",\n")
-                    };
-                };
-
-                const rules = lines("rules");
-                const masks = lines("masks");
+                const rules = presetLines("rules", await presetsOf("rules"));
 
                 return [
-                    "// auto-generated — preset modules discovered on disk",
+                    "// auto-generated — rule presets discovered on disk",
                     ...rules.imports,
-                    ...masks.imports,
+                    `import { masks } from "#${name}/masks";`,
                     "",
                     "export const rules = {",
                     rules.record,
                     "};",
                     "",
-                    "export const masks = {",
-                    masks.record,
-                    "};",
+                    "export { masks };",
                     "",
                     "export default { rules, masks };"
                 ].join("\n");

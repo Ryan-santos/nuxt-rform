@@ -67,5 +67,5 @@
         required: undefined
     });
 
-    const { props } = await useField(_props as unknown as InternalProps);
+    const { props } = useField(_props as unknown as InternalProps);
 </script>

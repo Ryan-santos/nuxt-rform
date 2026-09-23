@@ -90,21 +90,37 @@ describe("um arquivo com o nome de um embutido", () => {
 });
 
 describe("os artefatos gerados", () => {
+    // O registry guarda só nomes — quem carrega o caminho é o `components-map`, que
+    // importa cada campo estaticamente. É lá que a substituição se prova.
     it("resolvem um componente substituído para o arquivo do usuário, uma vez só", async () => {
         const registry = await read("rform/registry.ts");
-        const entries = [...registry.matchAll(/^ {4}Switch:/gm)];
+        const map = await read("rform/components-map.ts");
 
-        expect(entries).toHaveLength(1);
-        expect(registry).toContain("rform/fields/Switch.vue");
-        expect(registry).not.toContain("src/runtime/components/fields/Switch.vue");
+        expect([...registry.matchAll(/^ {4}"Switch"/gm)]).toHaveLength(1);
+
+        expect(map).toContain("rform/fields/Switch.vue");
+        expect(map).not.toContain("src/runtime/components/fields/Switch.vue");
     });
 
     it("listam os componentes do usuário ao lado dos embutidos", async () => {
         const registry = await read("rform/registry.ts");
 
-        expect(registry).toContain("Rating: () => import");
-        expect(registry).toContain("Hint: () => import");
-        expect(registry).toContain("Text: () => import");
+        expect(registry).toContain(`"Rating"`);
+        expect(registry).toContain(`"Hint"`);
+        expect(registry).toContain(`"Text"`);
+    });
+
+    // O `vue-tsc` lê o SFC antes da reescrita do plugin, então o `defaults` injetado
+    // só é conferido aqui. Tem de ser `.ts`: o `skipLibCheck` do Nuxt não olha para
+    // `.d.ts`, e lá a asserção passaria batida — medido.
+    it("conferem contra Base o defaults que o plugin injeta, inclusive o do usuário", async () => {
+        const components = await read("rform/types/components/index.ts");
+        const utils = await read("rform/types/components/utils/index.ts");
+
+        expect(components).toMatch(
+            /Assert<Injected<typeof import\("[^"]*rform\/fields\/Rating\.vue"\)>>/
+        );
+        expect(utils).toMatch(/Assert<Injected<typeof import\("[^"]*rform\/utils\/Hint\.vue"\)>>/);
     });
 
     it("registram os componentes do usuário sob os prefixos R e RUtils", async () => {
@@ -146,17 +162,17 @@ describe("os artefatos gerados", () => {
 });
 
 describe("um nome de componente que não resolve", () => {
-    it("falha alto no useField em vez de tomar emprestado os defaults do Text", async () => {
-        await expect(useField({})).rejects.toThrow(/could not resolve a component name/);
+    // Síncrono nos dois, não como rejeição: o nome é injetado em build time, então a
+    // falta dele é falha de build e não há o que aguardar antes de dizer.
+    it("falha alto no useField em vez de tomar emprestado os defaults do Text", () => {
+        expect(() => useField({})).toThrow(/could not resolve a component name/);
 
-        await expect(useField({}, undefined, "Nope" as never)).rejects.toThrow(/got "Nope"/);
+        expect(() => useField({}, undefined, { name: "Nope" as never })).toThrow(/got "Nope"/);
     });
 
-    // Síncrono, não como rejeição: o nome é injetado em build time, então a falta
-    // dele é falha de build e não há o que aguardar antes de dizer.
     it("falha alto no useUtil em vez de tomar emprestado os defaults do Label", () => {
         expect(() => useUtil()).toThrow(/could not resolve a component name/);
 
-        expect(() => useUtil(undefined, "Nope" as never)).toThrow(/got "Nope"/);
+        expect(() => useUtil({ name: "Nope" as never })).toThrow(/got "Nope"/);
     });
 });

@@ -36,7 +36,7 @@
 </script>
 
 <script setup lang="ts">
-    const { props, upper } = useUtil<Props>(defaults);
+    const { props, upper } = useUtil<Props>();
 
     const max = computed(() => {
         return typeof props.value.length === "string"

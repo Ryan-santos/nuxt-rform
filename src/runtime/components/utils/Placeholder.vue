@@ -53,7 +53,7 @@
         focused?: boolean;
     }>();
 
-    const { props, upper, tr } = useUtil<Props>(defaults);
+    const { props, upper, tr } = useUtil<Props>();
 
     const modelFilled = computed(() => {
         const value = upper.model.value;

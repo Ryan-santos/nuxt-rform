@@ -46,5 +46,5 @@
         loading: undefined
     });
 
-    const { model, props } = await useField(_props);
+    const { model, props } = useField(_props);
 </script>

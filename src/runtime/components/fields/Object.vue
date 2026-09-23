@@ -40,7 +40,7 @@
         loading: undefined
     });
 
-    const { id, model, props } = await useField(_props);
+    const { id, model, props } = useField(_props);
 
     useProvide({
         id,

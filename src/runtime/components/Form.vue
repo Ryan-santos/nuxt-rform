@@ -92,7 +92,7 @@
         focusError: undefined
     });
 
-    const { id, model, props } = await useField(_props as unknown as InternalProps);
+    const { id, model, props } = useField(_props as unknown as InternalProps);
 
     useProvide({
         id,
@@ -219,8 +219,5 @@
         }
     };
 
-    // Macro do compilador: vira `__expose(...)` sobre o contexto já capturado, e o pai
-    // só lê o ref depois de o Suspense resolver.
-    // eslint-disable-next-line vue/no-expose-after-await -- ver acima
     defineExpose({ model, validate, submit, setErrors, errors });
 </script>

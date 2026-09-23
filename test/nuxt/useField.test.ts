@@ -5,6 +5,8 @@ import { defineComponent, h, provide, ref } from "vue";
 
 import type { Element } from "#rform/types";
 
+// Como o vite plugin o entregaria: estas montagens chamam a composable direto.
+import { defaults as textDefaults } from "../../src/runtime/components/fields/Text.vue";
 import useField, { key } from "../../src/runtime/composables/useField";
 
 const Harness = defineComponent({
@@ -12,8 +14,11 @@ const Harness = defineComponent({
         sourceProps: { type: Object, required: true },
         modelValue: { type: null, default: undefined }
     },
-    async setup(props) {
-        const ctx = await useField(props.sourceProps as Element, undefined, "Text");
+    setup(props) {
+        const ctx = useField(props.sourceProps as Element, undefined, {
+            name: "Text",
+            defaults: textDefaults
+        });
         return () =>
             h(
                 "pre",
@@ -55,12 +60,11 @@ describe("useField", () => {
             props: {
                 modelValue: { type: null, default: undefined }
             },
-            async setup() {
-                const ctx = await useField(
-                    { name: "child", modelValue: undefined } as never,
-                    undefined,
-                    "Text"
-                );
+            setup() {
+                const ctx = useField({ name: "child", modelValue: undefined } as never, undefined, {
+                    name: "Text",
+                    defaults: textDefaults
+                });
                 return () => h("p", { "data-testid": "current" }, String(ctx.model.value));
             }
         });

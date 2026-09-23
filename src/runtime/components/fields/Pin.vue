@@ -89,7 +89,7 @@
         autofocus: undefined
     });
 
-    const { model, props } = await useField(_props);
+    const { model, props } = useField(_props);
 
     const count = computed(() => props.value.length ?? defaults.length);
 

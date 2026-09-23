@@ -124,7 +124,7 @@
         loading: undefined
     });
 
-    const { model, props } = await useField(_props, {
+    const { model, props } = useField(_props, {
         set(value) {
             if (typeof value === "string") {
                 return Number.parseInt(value) || null;

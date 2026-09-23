@@ -223,6 +223,27 @@ describe("o contrato de validate e submit", () => {
 
         expect(wrapper.text()).not.toContain("Campo obrigatório.");
     });
+
+    // Erro de autoria, e por isso alto nos dois pontos. Antes ele só aparecia no
+    // mount, e o `validate()` **passava** — a rule nem chegava a ser registrada,
+    // então um typo desligava a validação daquele campo calado.
+    it("não deixa um preset inexistente aprovar a validação calado", async () => {
+        const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        const { scope } = await mount({ modelValue: {} }, () =>
+            h(RText, { name: "nome", rule: "naoExiste" } as never)
+        );
+
+        await expect(scope.validate()).rejects.toThrow(/naoExiste/);
+
+        // E sem deixar rejeição solta: o mount tem um dono para ela, que é o que faz
+        // o typo aparecer mesmo em quem nunca chega a submeter.
+        expect(erro).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining("naoExiste") })
+        );
+
+        erro.mockRestore();
+    });
 });
 
 describe("foco no primeiro erro", () => {

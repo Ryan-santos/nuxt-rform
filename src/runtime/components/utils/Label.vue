@@ -38,5 +38,5 @@
 </script>
 
 <script setup lang="ts">
-    const { props, tr } = useUtil<Props>(defaults);
+    const { props, tr } = useUtil<Props>();
 </script>

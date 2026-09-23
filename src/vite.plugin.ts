@@ -12,6 +12,12 @@ const GENERIC = String.raw`\s*(<[^<>]*(?:<[^<>]*>[^<>]*)*>)?\s*`;
 const ARGS = String.raw`\(([^()]*(?:\([^()]*\)[^()]*)*)\)`;
 
 /**
+ * O `defaults` que o componente exporta do `<script lang="ts">`. É a convenção que
+ * o registry já exigia, então procurá-la aqui não pede nada de novo a ninguém.
+ */
+const DECLARES_DEFAULTS = /\bexport\s+const\s+defaults\b/;
+
+/**
  * Quantos argumentos a chamada tem: vírgulas de **topo**, com comentário fora da
  * conta. Contar por lookahead pegava a vírgula de dentro de um `//` no corpo de um
  * `opts`, e aí a injeção do nome simplesmente não acontecia.
@@ -40,8 +46,9 @@ const countArgs = (params: string): number => {
 };
 
 /**
- * Reescreve `useField(props)` como `useField(props, undefined, "Text")`, para o
- * componente aprender o próprio nome sem repeti-lo no arquivo.
+ * O componente declara `export const defaults` e tem um nome de arquivo; o build
+ * conhece os dois, então nenhum dos dois se repete na chamada. Um
+ * `useField(props)` vira `useField(props, undefined, { name: "Text", defaults })`.
  *
  * @param roots Diretórios cujos `.vue` recebem a injeção — os componentes do módulo
  * mais `app/rform/{fields,utils}`.
@@ -65,6 +72,13 @@ export default (roots: string[]): Plugin => {
 
             const fileName = path.split("/").pop()!.replace(".vue", "");
 
+            // O identificador, não o objeto: o `<script setup>` divide escopo com o
+            // `<script>`, então basta citá-lo. Quem não o declara fica sem a chave, e
+            // a composable cai no `{}` de sempre.
+            const injected = DECLARES_DEFAULTS.test(code)
+                ? `{ name: "${fileName}", defaults }`
+                : `{ name: "${fileName}" }`;
+
             const replaceCode = code
                 // Global de propósito: uma segunda chamada não reescrita cairia
                 // calada nos defaults de outro componente.
@@ -75,27 +89,27 @@ export default (roots: string[]): Plugin => {
 
                         switch (paramCount) {
                             case 1:
-                                return `useField${generic}(${params}, undefined, "${fileName}")`;
+                                return `useField${generic}(${params}, undefined, ${injected})`;
                             case 2:
-                                return `useField${generic}(${params}, "${fileName}")`;
+                                return `useField${generic}(${params}, ${injected})`;
                             default:
                                 return match;
                         }
                     }
                 )
-                // O nome vai *depois* do que foi passado, não no lugar: o primeiro
-                // argumento é o `defaults` do componente, e descartá-lo mandava a
-                // composable buscar no registry, async, o que o chamador já tinha.
+                // Um `defaults` escrito à mão vira a chave do objeto: continua
+                // rodando, e só o type-check se perde. Ver "Ele injeta o `defaults`"
+                // no `.claude/CLAUDE.md`.
                 .replace(
                     new RegExp(`\\buseUtil${GENERIC}${ARGS}`, "g"),
-                    (match, generic = "", params) => {
+                    (match, generic = "", params: string) => {
                         const paramCount = countArgs(params);
 
                         switch (paramCount) {
                             case 0:
-                                return `useUtil${generic}(undefined, "${fileName}")`;
+                                return `useUtil${generic}(${injected})`;
                             case 1:
-                                return `useUtil${generic}(${params}, "${fileName}")`;
+                                return `useUtil${generic}({ name: "${fileName}", defaults: ${params.trim()} })`;
                             default:
                                 return match;
                         }

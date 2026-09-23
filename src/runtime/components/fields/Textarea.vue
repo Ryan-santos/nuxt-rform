@@ -97,5 +97,5 @@
         loading: undefined
     });
 
-    const { mask, model, props } = await useField(_props);
+    const { mask, model, props } = useField(_props);
 </script>

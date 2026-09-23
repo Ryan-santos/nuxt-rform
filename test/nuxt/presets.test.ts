@@ -69,23 +69,26 @@ describe("barrel #rform/utils", () => {
 });
 
 describe("namespace br", () => {
+    // Dois arquivos porque as masks saem num template próprio — é ele que o
+    // `useField` importa estaticamente.
     it("prefixa todo preset brasileiro, rules e masks igualmente", async () => {
-        const presets = await read("rform/presets.ts");
+        const rules = await read("rform/presets.ts");
+        const masks = await read("rform/masks.ts");
 
         for (const name of ["brCpf", "brCnpj", "brCep", "brTelefone"]) {
-            expect(presets).toContain(`"${name}"`);
+            expect(rules).toContain(`"${name}"`);
         }
 
         for (const name of ["brCelular", "brCpfCnpj", "brPlaca", "brData"]) {
-            expect(presets).toContain(`"${name}"`);
+            expect(masks).toContain(`"${name}"`);
         }
     });
 
     it("não deixa preset brasileiro sem prefixo para trás", async () => {
-        const presets = await read("rform/presets.ts");
+        const sources = [await read("rform/presets.ts"), await read("rform/masks.ts")].join("\n");
 
         for (const name of ["cpf", "cnpj", "cep", "telefone", "celular", "placa"]) {
-            expect(presets).not.toContain(`"${name}":`);
+            expect(sources).not.toContain(`"${name}":`);
         }
     });
 

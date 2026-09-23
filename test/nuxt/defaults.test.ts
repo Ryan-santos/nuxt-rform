@@ -5,6 +5,11 @@ import { computed, defineComponent, h, provide, ref } from "vue";
 
 import { RArray } from "#components";
 
+// O `defaults` de cada um, como o vite plugin o entregaria: estas montagens chamam a
+// composable direto, então o plugin nunca passa por elas.
+import { defaults as numberDefaults } from "../../src/runtime/components/fields/Number.vue";
+import { defaults as textDefaults } from "../../src/runtime/components/fields/Text.vue";
+import { defaults as placeholderDefaults } from "../../src/runtime/components/utils/Placeholder.vue";
 import useField, { keyProp } from "../../src/runtime/composables/useField";
 import useUtil from "../../src/runtime/composables/useUtil";
 
@@ -50,16 +55,22 @@ const sourceProps = { type: Object, required: true } as const;
 
 const TextField = defineComponent({
     props: { sourceProps },
-    async setup(props) {
-        const ctx = await useField(props.sourceProps as never, undefined, "Text");
+    setup(props) {
+        const ctx = useField(props.sourceProps as never, undefined, {
+            name: "Text",
+            defaults: textDefaults
+        });
         return () => render(ctx.props.value as Rendered);
     }
 });
 
 const NumberField = defineComponent({
     props: { sourceProps },
-    async setup(props) {
-        const ctx = await useField(props.sourceProps as never, undefined, "Number");
+    setup(props) {
+        const ctx = useField(props.sourceProps as never, undefined, {
+            name: "Number",
+            defaults: numberDefaults
+        });
         return () => render(ctx.props.value as Rendered);
     }
 });
@@ -111,10 +122,8 @@ describe("defaults do usuário (app/rform/defaults.ts)", () => {
 });
 
 const Util = defineComponent({
-    async setup() {
-        // Sem o argumento `defaults`: o caminho do registry, que um util escrito antes
-        // da forma síncrona ainda toma.
-        const { props } = await useUtil(undefined, "Placeholder");
+    setup() {
+        const { props } = useUtil({ name: "Placeholder", defaults: placeholderDefaults });
 
         return () =>
             h(

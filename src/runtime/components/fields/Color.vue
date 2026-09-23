@@ -184,7 +184,7 @@
         loading: undefined
     });
 
-    const { model, props } = await useField(_props);
+    const { model, props } = useField(_props);
 
     const hexToRgb = (hex: string): [number, number, number] | null => {
         const match = /^#?([a-f\d]{6})$/i.exec(hex);

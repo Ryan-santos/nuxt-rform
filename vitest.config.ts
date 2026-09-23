@@ -22,6 +22,7 @@ export default defineConfig({
                         "#rform/composables": `${rformAliasRoot}/composables.ts`,
                         "#rform/defaults": `${rformAliasRoot}/defaults.ts`,
                         "#rform/locales": `${rformAliasRoot}/locales.ts`,
+                        "#rform/masks": `${rformAliasRoot}/masks.ts`,
                         "#rform/presets": `${rformAliasRoot}/presets.ts`,
                         "#rform/registry": `${rformAliasRoot}/registry.ts`,
                         // The engine the module falls back to. Aliasing it here
