@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v0.3.5
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.4...v0.3.5)
+
+### 📦 Build
+
+- Atualizando e fixando pacotes ([6cc7dbd](https://github.com/Ryan-santos/nuxt-rform/commit/6cc7dbd))
+
+### 🏡 Chore
+
+- Configurando oxfmt para md e json ([664e562](https://github.com/Ryan-santos/nuxt-rform/commit/664e562))
+
+### 🎨 Styles
+
+- Corrigindo grow e placeholder ([0b85718](https://github.com/Ryan-santos/nuxt-rform/commit/0b85718))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.4
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.3...v0.3.4)
