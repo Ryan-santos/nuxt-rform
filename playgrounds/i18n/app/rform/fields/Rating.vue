@@ -40,7 +40,7 @@
 
     export const defaults = defineDefaults({
         ui: {
-            container: "flex grow flex-col gap-1",
+            container: "flex w-full flex-col gap-1",
             disabled: "pointer-events-none opacity-60",
             group: "flex w-fit flex-row gap-1 rounded-xl bg-background-100 p-2",
             star: {

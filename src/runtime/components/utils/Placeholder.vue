@@ -33,7 +33,9 @@
             text-(--rf-color-contrast)/30 bg-(--rf-color-background-100) pointer-events-none block w-fit rounded-(--rf-radius-sm)
             transition-[translate,top,left,font-size,padding] duration-300
         `,
-        filled: "absolute inset-x-0 top-0 left-2 -translate-y-1/2 px-1 py-0.5 text-xs",
+        filled: `
+            absolute inset-x-0 top-0 left-2 max-w-[calc(100%-1rem)] -translate-y-1/2 truncate px-1 py-0.5 text-xs
+        `,
         notFilled: "relative top-3 left-3 -z-10 h-0",
         disable: "font-bold opacity-0",
         required: "text-(--rf-color-danger) font-bold"

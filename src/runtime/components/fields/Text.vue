@@ -56,7 +56,7 @@
 
     export const defaults = defineDefaults({
         ui: {
-            container: "flex grow flex-col gap-1",
+            container: "flex w-full flex-col gap-1",
             disabled: "pointer-events-none opacity-60",
             group: {
                 wrapper: {
@@ -69,8 +69,15 @@
                     trailing: "p-3 pl-0 flex"
                 },
                 field: {
-                    container: "grow",
+                    container: "relative grow",
                     input: "w-full rounded-(--rf-radius-lg) bg-transparent outline-none p-3"
+                }
+            },
+            Utils: {
+                // Uma linha só, cortada na área de texto do input. O teto de largura é
+                // obrigatório: sem quebra de linha, a largura do util vira a do texto.
+                Placeholder: {
+                    notFilled: "absolute top-3 left-3 h-auto max-w-[calc(100%-1.5rem)] truncate"
                 }
             }
         },

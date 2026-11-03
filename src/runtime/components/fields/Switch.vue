@@ -59,7 +59,7 @@
 
     export const defaults = defineDefaults({
         ui: {
-            container: "flex grow flex-col gap-1",
+            container: "flex w-full flex-col gap-1",
             disabled: "pointer-events-none opacity-60",
             group: {
                 container: "relative z-0 flex cursor-pointer items-center justify-between gap-4",

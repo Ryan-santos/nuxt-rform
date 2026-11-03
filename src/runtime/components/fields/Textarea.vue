@@ -56,7 +56,7 @@
 
     export const defaults = defineDefaults({
         ui: {
-            container: "flex grow flex-col gap-1",
+            container: "flex w-full flex-col gap-1",
             disabled: "pointer-events-none opacity-60",
             group: {
                 wrapper: {
@@ -69,8 +69,15 @@
                     trailing: "p-3 pl-0 flex"
                 },
                 field: {
-                    container: "grow",
+                    container: "relative grow",
                     textarea: "w-full rounded-(--rf-radius-lg) bg-transparent outline-none p-3"
+                }
+            },
+            Utils: {
+                // Parado, o placeholder ocupa só a área de texto (o padding do textarea
+                // nos quatro lados) e recorta o que não couber, como o nativo.
+                Placeholder: {
+                    notFilled: "absolute inset-3 h-auto overflow-hidden"
                 }
             }
         },

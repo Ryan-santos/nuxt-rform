@@ -125,7 +125,7 @@
 
     export const defaults = defineDefaults({
         ui: {
-            container: "flex grow flex-col gap-2",
+            container: "flex w-full flex-col gap-2",
             group: {
                 dropzone: `
                     relative flex cursor-pointer flex-row items-center justify-center gap-3

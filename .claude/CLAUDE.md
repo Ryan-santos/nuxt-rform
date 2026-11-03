@@ -1342,6 +1342,58 @@ Nenhuma utility do Tailwind declara `opacity: 1` no estado base, então a regra 
 
 Compila, passa na lint e não emite aviso nenhum. Para conferir o que o Tailwind de fato emitiu: `compile("@tailwind utilities;", { base }).build([classe])` da API de `tailwindcss`.
 
+### O container raiz não cresce
+
+O `ui.container` de todo campo é `w-full`, nunca `grow`. `grow` age no eixo **do
+pai**, e o pai natural de um campo é o `RForm`, que é `flex-col` — então ali ele
+crescia a **altura**. Num pai de altura definida (drawer, painel) a sobra era
+dividida entre os campos com `grow`, cada um ganhava um vão embaixo do input, e o
+`RSelect` (que já era `w-full`) descia empurrado. Num bottom sheet de altura
+automática não sobra nada, e por isso o bug parecia intermitente. Era a issue #9.
+
+`w-full` dá em coluna a mesma largura que o `stretch` já dava. Em linha (campo ao
+lado de um botão) ele parte de 100% e encolhe até caber o vizinho, e dois campos
+lado a lado ficam iguais — com `grow`, a divisão partia do max-content de cada um,
+placeholder incluído. O `grow` do próprio `RForm` fica: é ele que ocupa o painel, e
+a sobra agora mora no fim do form. Quem quer um campo ocupando a altura pede
+`:ui="{ container: 'grow' }"`, que o `twMerge` soma ao `w-full`.
+
+Os `grow` de **dentro** (`group.field.container`) estão certos: moram no wrapper
+`flex-row` e agem na largura. A guarda é `test/nuxt/fieldLayout.test.ts`, que varre o
+`defaults.ui.container` de todo `fields/*.vue`.
+
+### O placeholder parado precisa de caixa
+
+O `notFilled` do `RUtilsPlaceholder` é `relative top-3 left-3 -z-10 h-0`, com `block
+w-fit` vindo do `default`: deslocamento relativo não encolhe a caixa, e `h-0` não
+recorta nada. Num placeholder curto ninguém nota; numa frase que quebra, as linhas
+iam 12px além da borda direita e desciam para fora do campo, por cima do vizinho.
+Era a issue #10, no `RTextarea`.
+
+O conserto é por campo, via `ui.Utils.Placeholder`, com o `field.container` virando
+`relative` (como o `Date` e o `Hour` já eram):
+
+| campo      | `notFilled` mesclado                                                        |
+| ---------- | --------------------------------------------------------------------------- |
+| `Textarea` | `absolute inset-3 h-auto overflow-hidden` — quebra e recorta, como o nativo |
+| `Text`     | `absolute top-3 left-3 h-auto max-w-[calc(100%-1.5rem)] truncate`           |
+
+E o `filled` do util ganhou `max-w-[calc(100%-1rem)] truncate`, para o rótulo
+flutuante em `text-xs` não descer sobre o texto digitado.
+
+**O `max-w` é o que faz o `truncate` funcionar, e foi medido.** Com
+`white-space: nowrap`, min-content e max-content são a mesma linha, e o `w-fit`
+(`fit-content`) resolve para a largura do texto inteiro — medido no Chromium, o
+placeholder do `RText` passava 199px da borda e o rótulo flutuante 399px, com o
+`truncate` ali e sem cortar nada. `w-auto` não serve de saída: ele moraria noutra
+chave do `ui` que o `w-fit`, as duas cairiam no elemento sem passar pelo `twMerge`, e
+quem ganha é a ordem da folha. `max-width` é outra propriedade, não disputa nada. O
+`Textarea` não precisa: quebrando linha, o `fit-content` já para na largura da caixa.
+
+`Number`, `Date`, `Hour`, `Select` e `Color` ficaram com o `notFilled` de antes, e
+um placeholder mais largo que eles ainda quebra. O util mudar o default mexeria em
+todo campo de usuário que o usa, e cada um posiciona o placeholder de um jeito.
+
 ### `size()` do floating-ui sempre ganha do `flip()`
 
 O `RUtilsDropdown` posiciona com `offset → flip → shift → middleware do campo`, e o campo que passa middleware é o `Select`, com um `size()` que casa a largura da referência e limita a altura ao espaço disponível. Os dois disputam o mesmo elemento, e **o `size` ganha**: ele devolve `reset: { rects: true }` sempre que o `apply` mudou as dimensões, e o `computePosition` reinicia a cadeia (`i = -1`) com rects novos. Na volta, o `flip` mede um painel **já** achatado no que cabe embaixo — sem overflow, sem flip.
