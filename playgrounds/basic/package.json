@@ -11,17 +11,17 @@
         "postinstall": "nuxi prepare"
     },
     "devDependencies": {
-        "@iconify-json/eos-icons": "^1.2.0",
-        "@iconify-json/fa6-regular": "^1.2.0",
-        "@iconify-json/fa6-solid": "^1.2.0",
-        "@iconify-json/mi": "^1.2.0",
-        "@iconify-json/ooui": "^1.2.0",
-        "@nuxt/fonts": "^0.14.0",
-        "@nuxt/icon": "^2.2.2",
-        "@nuxtjs/color-mode": "^4.0.0",
-        "@nuxtjs/i18n": "^10.6.0",
-        "@tailwindcss/vite": "^4.3.0",
-        "nuxt": "^4.4.2",
-        "tailwindcss": "^4.1.17"
+        "@iconify-json/eos-icons": "1.2.4",
+        "@iconify-json/fa6-regular": "1.2.4",
+        "@iconify-json/fa6-solid": "1.2.4",
+        "@iconify-json/mi": "1.2.2",
+        "@iconify-json/ooui": "1.2.25",
+        "@nuxt/fonts": "1.2.0",
+        "@nuxt/icon": "2.6.2",
+        "@nuxtjs/color-mode": "4.1.0",
+        "@nuxtjs/i18n": "10.6.0",
+        "@tailwindcss/vite": "4.3.3",
+        "nuxt": "4.6.3",
+        "tailwindcss": "4.3.3"
     }
 }

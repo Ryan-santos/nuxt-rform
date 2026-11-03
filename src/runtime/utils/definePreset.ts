@@ -11,6 +11,8 @@ import type { BaseContext, RulePreset } from "./resolveRule";
  *
  * @example validation: ({ value, uf }: RuleContext<{ uf: string }>) => …
  */
+// Vazio de propósito: preset sem args é referenciado só pelo nome.
+// oxlint-disable-next-line typescript/no-generated-empty-object-type
 export type RuleContext<T extends object = Record<never, never>> = BaseContext & T;
 
 /**

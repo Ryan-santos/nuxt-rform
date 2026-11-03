@@ -1,4 +1,5 @@
 @rules/comentarios.md
+@rules/dependencias.md
 
 # rform
 
@@ -952,6 +953,8 @@ E o import é `import()` porque o mesmo handler faz `i18nPathSet.add` de todo **
 
 Isso quebrou o `0.1.0` no npm (issue #1), e **não aparecia aqui**: o `localePaths` que o i18n manda pré-compilar passou a filtrar `type === "static"` no 10.6, que é a versão dos playgrounds. No 10.4 — a do app que reportou — a lista é todo arquivo de locale. `test/unit/langFile.test.ts` roda o `generateJavaScript` do `@intlify/bundle-utils` de verdade sobre o arquivo gerado, com os mesmos argumentos que o `VueI18nPlugin` recebe, e exige que ele volte **idêntico** — mais um caso que prova que a forma antiga saía com `rform{`.
 
+Por isso o `@intlify/bundle-utils` fica para trás; ver `rules/dependencias.md`.
+
 **Os arquivos do `langDir` são escritos na mão, com `writeFile`, além do `addTemplate`.** O @nuxtjs/i18n lê cada um com `readFileSync` durante o setup dele (`analyzeResource`, para descobrir se é objeto ou loader), e template do Nuxt só chega ao disco no `builder:generateApp`, bem depois. O sintoma de esquecer isso é um `ENOENT` apontando para um caminho dentro do próprio `buildDir`.
 
 **Quem manda na lista de codes é o app, e a ponte só responde.** O merge do i18n é por code exato — um app com `locales: ["pt"]` não veria um pack registrado só como `pt-BR` — mas registrar `pt` na marra tem preço: o `mergeConfigLocales` do i18n junta _todos_ os configs num `Map` por code, então **um code que só a ponte cita entra na lista de locales do app**, e de lá sai no seletor de idioma dele, no `localeCodes` e no prerender.
@@ -1495,6 +1498,8 @@ if (a == null || a?.type === "file") return;
 — um `<textarea>` cai fora e nunca é bindado. O `MaskInput` do maska, porém, só usa `value`, `selectionStart`, `setSelectionRange`, `addEventListener` e `dispatchEvent`, que textarea tem; só o tipo `MaskaTarget` e esse guard excluem. `vMask` instancia `MaskInput` direto no elemento (input **ou** textarea), com WeakMap por elemento e `destroy()` no `unmounted`.
 
 O cast `el as HTMLInputElement` na construção é deliberado — `MaskaTarget` é tipado só para input, o runtime é agnóstico.
+
+**Esse "agnóstico" acabou na maska 3.2.1**: o `MaskInput` passou a recusar `<textarea>`. Por isso ela está fixada em `3.2.0`; ver `rules/dependencias.md`.
 
 **`v-mask` liga só no elemento onde está — não procura descendente.** O maska tem o fallback `querySelector("input")`, e ele é a causa de duas classes de bug: um wrapper (ou uma diretiva que o Vue repassa para a raiz de um componente) sequestra o campo que outro binding já possui, e `mounted`/`unmounted` resolvem nós diferentes, vazando listener. Resolver para `el` ou nada mantém todos os hooks falando do mesmo elemento a vida inteira do binding. Posto em elemento que não é campo, avisa no console em vez de falhar calado.
 
@@ -2320,7 +2325,7 @@ Os commits deste repo levam gitmoji antes do tipo (`:sparkles: feat: …`) e o c
 
 ### `typeCheck` do oxlint fica desligado, e é o que deixa o `lint` passar
 
-`options.typeCheck` é experimental e despeja os diagnósticos crus do tsc. O tsgolint não tem o plugin do Vue, então **todo import de `.vue` volta como `TS2307: Cannot find module`** — 6 numa árvore limpa, e `pnpm run lint` saindo com 1. Como a primeira coisa que o `release` faz é `pnpm run lint`, a cadeia inteira abortava antes de começar.
+`options.typeCheck` é experimental e despeja os diagnósticos crus do tsc. O tsgolint não tem o plugin do Vue, então **todo import de `.vue` volta como `TS2307: Cannot find module`** — 11 numa árvore limpa, e `pnpm run lint` saindo com 1. Como a primeira coisa que o `release` faz é `pnpm run lint`, a cadeia inteira abortava antes de começar.
 
 Quem manda em tipo aqui é o `test:types`, que roda vue-tsc nos oito alvos e enxerga `.vue`. O `typeAware` continua ligado: as regras que ele habilita não passam por resolução de módulo.
 
@@ -2764,18 +2769,26 @@ instante. O `mcpData.ts` já fazia assim antes.
 
 Medido, e é a raiz de tudo o que vem a seguir:
 
-| comando        | `buildDir`                                 | quando escreve o tsconfig                         |
-| -------------- | ------------------------------------------ | ------------------------------------------------- |
-| `nuxi prepare` | `<rootDir>/.nuxt`                          | `clearBuildDir` → `buildNuxt` → **`writeTypes`**  |
-| `nuxi build`   | `<rootDir>/node_modules/.cache/nuxt/.nuxt` | `clearBuildDir` → **`writeTypes`** → `buildNuxt`  |
-| `nuxi dev`     | `<rootDir>/.nuxt`                          | herda o do prepare anterior (escreve em paralelo) |
+| comando        | `buildDir`                                 | o tsconfig                                                                  |
+| -------------- | ------------------------------------------ | --------------------------------------------------------------------------- |
+| `nuxi prepare` | `<rootDir>/.nuxt`                          | `clearBuildDir` → `buildNuxt` → **`writeTypes`**                            |
+| `nuxi build`   | `<rootDir>/node_modules/.cache/nuxt/.nuxt` | **`writeTypes`** → `buildNuxt`, mas em `<rootDir>/.nuxt` e só se ele faltar |
+| `nuxi dev`     | `<rootDir>/.nuxt`                          | herda o do prepare anterior (escreve em paralelo)                           |
 
 Consequência direta: **no `prepare` o `api.json` sai `[]`**, porque o checker precisa
 do tsconfig e ele ainda não existe. Não faz falta — prepare só gera tipos, nada
 renderiza — e é por isso que o aviso é suprimido quando `nuxt.options._prepare` é
 verdadeiro: mandar "rode `nuxi prepare`" durante um `nuxi prepare` é ruído que não
-diz nada. O `build`, que é o que publica o site, escreve os tipos **antes** e sai
-completo.
+diz nada. O `build`, que é o que publica o site, acha o tsconfig e sai completo.
+
+**O tsconfig mora em `nuxt.options.typesDir`, não no `buildDir`.** Desde a Nuxt
+4.6 os dois se separam no `nuxi build`: o build vai para o cache, e os tipos ficam
+no `.nuxt` do app, escritos só se faltarem (`writeIfMissing`). O módulo lia
+`buildDir/tsconfig.app.json`, não achava nada, e o site saía com o `api.json`
+vazio: tabela de props sem linha e o `get-component-api` do MCP respondendo 404
+para todo componente. O build saía com 0, e o único sinal era um WARN no meio do
+log. Fora do `nuxi build` o `typesDir` é o próprio `buildDir`, então a leitura por
+ele vale nos três comandos.
 
 #### O `api.json` não pode ser um `addTemplate`
 
@@ -2989,6 +3002,9 @@ troca de provider quando o preset contém `cloudflare`, e o provider de lá impo
 `Cannot resolve "agents/mcp" … and externals are not allowed!` — que não diz que a
 saída é instalar o pacote. `h3` e `zod` são os peers não-opcionais do toolkit; o
 `zod` já estava.
+
+O `@modelcontextprotocol/server` também tem de estar declarado, e pelo mesmo
+motivo; ver `rules/dependencias.md`.
 
 O `@nuxt/content` avisa `switching to D1 database with binding DB` no prepare e no
 build. É só aviso: tudo é pré-renderizado e nada consulta conteúdo em runtime, então

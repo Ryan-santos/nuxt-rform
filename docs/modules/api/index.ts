@@ -32,7 +32,9 @@ export default defineNuxtModule({
 
         const out = join(dir, "api.json");
 
-        const tsconfig = join(nuxt.options.buildDir, "tsconfig.app.json");
+        // `typesDir`, não `buildDir`: desde a Nuxt 4.6 o `nuxi build` compila no
+        // cache, mas o tsconfig continua no `.nuxt` do app.
+        const tsconfig = join(nuxt.options.typesDir, "tsconfig.app.json");
 
         /**
          * `build:before`, e **não** um `addTemplate`: os `.vue` do módulo entram no

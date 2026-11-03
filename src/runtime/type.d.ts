@@ -46,8 +46,10 @@ export type SlotScope = {
     rule?: Rule;
 };
 
+// `{}` é "não-nulo", e desce em interface também (o `All` dos utils, no
+// `defineFieldDefaults`). `Record<string, unknown>` pararia nela.
 export type DeepPartial<T> = {
-    [P in keyof T]?: T[P] extends Record<unknown, unknown> ? DeepPartial<T[P]> : T[P];
+    [P in keyof T]?: T[P] extends {} ? DeepPartial<T[P]> : T[P];
 };
 
 /**
