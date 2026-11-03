@@ -1371,15 +1371,34 @@ O `notFilled` do `RUtilsPlaceholder` é `relative top-3 left-3 -z-10 h-0`, com `
 w-fit` vindo do `default`: deslocamento relativo não encolhe a caixa, e `h-0` não
 recorta nada. Num placeholder curto ninguém nota; numa frase que quebra, as linhas
 iam 12px além da borda direita e desciam para fora do campo, por cima do vizinho.
-Era a issue #10, no `RTextarea`.
+Era a issue #10, no `RTextarea`, e a #11 nos outros cinco.
 
-O conserto é por campo, via `ui.Utils.Placeholder`, com o `field.container` virando
-`relative` (como o `Date` e o `Hour` já eram):
+O conserto é por campo, via `ui.Utils.Placeholder`, com o container do placeholder
+virando `relative` (o `Date` e o `Hour` já eram):
 
-| campo      | `notFilled` mesclado                                                        |
-| ---------- | --------------------------------------------------------------------------- |
-| `Textarea` | `absolute inset-3 h-auto overflow-hidden` — quebra e recorta, como o nativo |
-| `Text`     | `absolute top-3 left-3 h-auto max-w-[calc(100%-1.5rem)] truncate`           |
+| campo                            | `notFilled` mesclado                                                        |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `Textarea`                       | `absolute inset-3 h-auto overflow-hidden` — quebra e recorta, como o nativo |
+| `Text`, `Select`, `Date`, `Hour` | `absolute top-3 left-3 h-auto max-w-[calc(100%-1.5rem)] truncate`           |
+| `Number`                         | o mesmo, com `left-1/2 -translate-x-1/2` — centralizado como o input        |
+| `Color`                          | `absolute top-3 left-12 h-auto max-w-[calc(100%-3.75rem)] truncate`         |
+
+**Três peças, e nenhuma é opcional.** Só `truncate` sobre o `h-0` esconde o
+placeholder inteiro, porque o `overflow: hidden` recorta uma caixa de altura zero —
+daí o `h-auto`. Com `h-auto` ele ocupa uma linha no fluxo e empurra o input para
+baixo — daí o `absolute`, e o container posicionado. E o teto de largura, adiante.
+
+**O `relative` muda também onde o rótulo flutuante pousa**, porque o `filled` é
+`absolute` e passa a se ancorar no mesmo container. No `Select` e no `Number` ele
+ficava no wrapper; agora fica depois do slot `leading` (e, no `Number`, do botão de
+menos), que é como o `RText` sempre foi. Continua no topo do campo, porque nos três o
+container começa na borda de cima do wrapper.
+
+**No `Color` o ancorado é o `field.container`, não o `content`** onde o placeholder
+mora. O `content` está dentro do `p-3`: ancorado ali, o rótulo flutuante (o `Color`
+nasce com `#000000`, então sem `label` ele flutua sempre) desceria 12px do topo e
+cobriria o hex. O preço é o `left-12` e o teto saberem do `p-3`, do swatch `size-6` e
+do `gap-3` — trocar o tamanho do swatch pelo `ui` pede trocar o `notFilled` junto.
 
 E o `filled` do util ganhou `max-w-[calc(100%-1rem)] truncate`, para o rótulo
 flutuante em `text-xs` não descer sobre o texto digitado.
@@ -1393,9 +1412,13 @@ chave do `ui` que o `w-fit`, as duas cairiam no elemento sem passar pelo `twMerg
 quem ganha é a ordem da folha. `max-width` é outra propriedade, não disputa nada. O
 `Textarea` não precisa: quebrando linha, o `fit-content` já para na largura da caixa.
 
-`Number`, `Date`, `Hour`, `Select` e `Color` ficaram com o `notFilled` de antes, e
-um placeholder mais largo que eles ainda quebra. O util mudar o default mexeria em
-todo campo de usuário que o usa, e cada um posiciona o placeholder de um jeito.
+**O default do util continua o antigo, de propósito.** Mudá-lo para a linha única
+fora do fluxo tornaria "o container que recebe o util é posicionado" um contrato novo
+para todo campo de usuário — e quem não o cumprisse teria o placeholder ancorado no
+wrapper, calado. Um campo próprio de uma linha copia o `notFilled` do `RText`.
+
+A guarda é o `describe("placeholder parado")` de `test/nuxt/fieldLayout.test.ts`, que
+cobre os sete e confere também **qual** ancestral é o posicionado — no `Color`, o avô.
 
 ### `size()` do floating-ui sempre ganha do `flip()`
 

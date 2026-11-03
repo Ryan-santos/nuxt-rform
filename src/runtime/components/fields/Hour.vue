@@ -157,6 +157,12 @@
                     inputEnd: "text-end",
                     separator: "my-auto w-fit px-1 opacity-50"
                 }
+            },
+            Utils: {
+                // Uma linha só, cortada na área de texto do input, como no `RText`.
+                Placeholder: {
+                    notFilled: "absolute top-3 left-3 h-auto max-w-[calc(100%-1.5rem)] truncate"
+                }
             }
         },
         default: "",

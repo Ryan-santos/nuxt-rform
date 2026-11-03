@@ -83,7 +83,7 @@
                     trailing: "flex p-3 pl-0"
                 },
                 field: {
-                    container: "flex grow flex-col",
+                    container: "relative flex grow flex-col",
                     input: `
                         w-full [appearance:textfield] rounded-(--rf-radius-lg) bg-transparent p-3 text-center outline-none
                         [&::-webkit-inner-spin-button]:appearance-none
@@ -96,8 +96,10 @@
                 `
             },
             Utils: {
+                // O molde do `RText`, centralizado como o input.
                 Placeholder: {
-                    notFilled: "left-1/2 -translate-x-1/2"
+                    notFilled:
+                        "absolute top-3 left-1/2 h-auto max-w-[calc(100%-1.5rem)] -translate-x-1/2 truncate"
                 }
             }
         },

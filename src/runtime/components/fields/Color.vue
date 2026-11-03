@@ -126,7 +126,7 @@
                     trailing: "p-3 pl-0 flex"
                 },
                 field: {
-                    container: "flex grow flex-row gap-3 p-3",
+                    container: "relative flex grow flex-row gap-3 p-3",
                     swatch: "block size-6 rounded-(--rf-radius-md) border border-(--rf-color-border) shadow-inner",
                     content: "flex grow flex-col",
                     text: "my-auto leading-none font-medium uppercase tracking-wide"
@@ -155,8 +155,11 @@
                 `
             },
             Utils: {
+                // Ancorado no `field.container`, e não no `content`: lá o rótulo
+                // flutuante desceria do topo do campo para cima do texto. O `left`
+                // e o teto pulam o padding e o swatch com o gap.
                 Placeholder: {
-                    notFilled: "top-0 left-0"
+                    notFilled: "absolute top-3 left-12 h-auto max-w-[calc(100%-3.75rem)] truncate"
                 },
                 Dropdown: {
                     popover: `

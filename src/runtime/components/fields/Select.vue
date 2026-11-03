@@ -425,7 +425,7 @@
                     trailing: "flex p-3 pl-0"
                 },
                 field: {
-                    container: "flex min-w-0 grow flex-col",
+                    container: "relative flex min-w-0 grow flex-col",
                     selected: `
                         flex min-h-12 w-full grow flex-row items-center gap-2
                         p-3
@@ -502,6 +502,10 @@
                 retry: "cursor-pointer underline underline-offset-2"
             },
             Utils: {
+                // Uma linha só, cortada na área de texto do `selected`, como no `RText`.
+                Placeholder: {
+                    notFilled: "absolute top-3 left-3 h-auto max-w-[calc(100%-1.5rem)] truncate"
+                },
                 Dropdown: {
                     popover: `
                         [--max-height:25rem] flex flex-col overflow-hidden rounded-(--rf-radius-lg) border border-(--rf-color-border)

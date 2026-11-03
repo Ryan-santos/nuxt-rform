@@ -2,7 +2,7 @@ import { mountSuspended } from "@nuxt/test-utils/runtime";
 // @vitest-environment nuxt
 import { describe, expect, it } from "vitest";
 
-import { RText, RTextarea } from "#components";
+import { RColor, RDate, RHour, RNumber, RSelect, RText, RTextarea } from "#components";
 
 const fields = import.meta.glob<{ defaults: { ui?: { container?: string } } }>(
     "../../src/runtime/components/fields/*.vue",
@@ -75,6 +75,62 @@ describe("placeholder parado", () => {
         expect(classes).not.toContain("h-0");
         expect(placeholder.element.parentElement!.classList).toContain("relative");
     });
+
+    // `depth` é quantos níveis acima mora o ancestral posicionado: no RColor o pai
+    // é o `content`, e ancorar ali tiraria o rótulo flutuante do topo do campo.
+    it.each([
+        { name: "RSelect", component: RSelect, props: { options: ["a"] }, depth: 1 },
+        { name: "RDate", component: RDate, props: {}, depth: 1 },
+        { name: "RHour", component: RHour, props: {}, depth: 1 },
+        {
+            name: "RNumber",
+            component: RNumber,
+            props: {},
+            depth: 1,
+            left: "left-1/2",
+            extra: ["-translate-x-1/2"]
+        },
+        {
+            name: "RColor",
+            component: RColor,
+            props: {},
+            depth: 2,
+            left: "left-12",
+            max: "max-w-[calc(100%-3.75rem)]"
+        }
+    ])(
+        "no $name, fica numa linha só, cortada na área do texto",
+        async ({ component, props, depth, left = "left-3", max, extra = [] }) => {
+            const wrapper = await mountSuspended(component, {
+                props: { ...props, label: "Campo", placeholder: "Uma frase mais larga que o campo" }
+            });
+            const placeholder = wrapper.get(".RUtilsPlaceholder");
+            const classes = placeholder.classes();
+
+            expect(classes).toEqual(
+                expect.arrayContaining([
+                    "absolute",
+                    "top-3",
+                    left,
+                    "h-auto",
+                    max ?? "max-w-[calc(100%-1.5rem)]",
+                    "truncate",
+                    ...extra
+                ])
+            );
+            expect(classes).not.toContain("relative");
+            expect(classes).not.toContain("h-0");
+
+            let anchor = placeholder.element.parentElement!;
+
+            for (let level = 1; level < depth; level++) {
+                expect(anchor.classList).not.toContain("relative");
+                anchor = anchor.parentElement!;
+            }
+
+            expect(anchor.classList).toContain("relative");
+        }
+    );
 
     // Sem label, o rótulo flutuante em letra pequena quebraria e desceria sobre o texto.
     it("flutuando, fica numa linha só", async () => {
