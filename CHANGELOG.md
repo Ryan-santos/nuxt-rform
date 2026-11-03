@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.3.6
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.5...v0.3.6)
+
+### 🏡 Chore
+
+- Adicionando agente de release ([59f174b](https://github.com/Ryan-santos/nuxt-rform/commit/59f174b))
+
+### 🎨 Styles
+
+- Placeholder parado numa linha só nos outros cinco campos ([28ddc47](https://github.com/Ryan-santos/nuxt-rform/commit/28ddc47))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.5
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.4...v0.3.5)
