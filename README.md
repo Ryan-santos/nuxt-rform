@@ -93,12 +93,12 @@ pnpm run docs      # :3000 — o `run` não é opcional: `docs` é comando do pn
 Quatro apps de rascunho, cada um provando um eixo diferente em condições de app
 real:
 
-| comando | o quê |
-|---|---|
-| `pnpm play` | [`playgrounds/i18n`](playgrounds/i18n/) — troca de idioma, packs do usuário |
-| `pnpm play:basic` | [`playgrounds/basic`](playgrounds/basic/) — cadastro, `RDynamic` por rota do Nitro, CRUD |
+| comando                | o quê                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `pnpm play`            | [`playgrounds/i18n`](playgrounds/i18n/) — troca de idioma, packs do usuário                   |
+| `pnpm play:basic`      | [`playgrounds/basic`](playgrounds/basic/) — cadastro, `RDynamic` por rota do Nitro, CRUD      |
 | `pnpm play:standalone` | [`playgrounds/standalone`](playgrounds/standalone/) — **sem** `@nuxtjs/i18n`, o motor próprio |
-| `pnpm play:ui` | [`playgrounds/ui`](playgrounds/ui/) — tokens `--rf-*`, `defineFieldDefaults`, `ui` por campo |
+| `pnpm play:ui`         | [`playgrounds/ui`](playgrounds/ui/) — tokens `--rf-*`, `defineFieldDefaults`, `ui` por campo  |
 
 ## Desenvolvimento
 

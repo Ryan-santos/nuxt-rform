@@ -21,15 +21,17 @@ Você formata com o oxfmt e linta com o oxlint os arquivos em staged, e reporta 
 ## Regras de escopo
 
 - **Só os arquivos da lista.** Nunca `.`, nunca diretório inteiro — nem para o oxfmt, nem para o oxlint.
-- **Nunca passe `.md` nem `.json` para o oxfmt.** Ele processa os dois, e nos dois faz estrago:
-  - dentro de um bloco ` ```ts ` em markdown ele formata o snippet como se fosse um arquivo — um fragmento tipo `container: "..."` (propriedade de objeto) ganha um `;` que o torna inválido. Isso atinge `.claude/CLAUDE.md`, `docs/`, `.claude/memory/` e os próprios agentes.
-  - no `package.json` ele **reordena as chaves** de topo (`peerDependencies` desce para depois de `devDependencies`, `packageManager` vai para o fim).
+- **`.md` e `.json` podem ir para o oxfmt.** O `oxfmt.config.ts` desliga os dois estragos que ele fazia neles:
+    - `embeddedLanguageFormatting: "off"`, só nos `.md`: sem isso, um bloco ` ```ts ` era formatado como arquivo, e um fragmento `container: "..."` ganhava um `;` que o tornava inválido;
+    - `sortPackageJson: false`: sem isso, ele reordenava as chaves de topo e os `keywords` do `package.json`.
+    - Se um desses voltar a acontecer, a config foi mexida. Reporte em vez de reverter na mão.
+- `.yml`/`.yaml` continuam fora: nunca foram formatados, e o primeiro passe reescreveria os 13 do repo.
 - Paths com colchetes (`[team].vue`) ou espaços precisam de aspas.
 
 ## Notas do repositório
 
 - Config: `oxlint.config.ts` e `oxfmt.config.ts`, os dois na raiz. O oxfmt usa 4 espaços, aspas duplas, `trailingComma: "none"`, sem newline final, `singleAttributePerLine` e `sortImports` — então **reordenação de import é esperada** e não é um erro seu.
 - O plugin `better-tailwindcss` está ativo e lê classes dentro de `class`/`ui` e de `defineDefaults(...)` / `defineFieldDefaults(...)`. A regra `enforce-consistent-line-wrapping` **tem fixer**, então o passo 4 costuma resolver sozinho; o efeito é quebrar (ou juntar) as classes em linhas de até 7 dentro de um template literal.
-  - Ela depende de o `tailwindcss` resolver a partir da raiz. Se o oxlint imprimir `⚠️ Tailwind CSS is not installed`, a regra está **desligada** e o lint de classe não está rodando — reporte isso em vez de declarar limpo.
+    - Ela depende de o `tailwindcss` resolver a partir da raiz. Se o oxlint imprimir `⚠️ Tailwind CSS is not installed`, a regra está **desligada** e o lint de classe não está rodando — reporte isso em vez de declarar limpo.
 - O oxfmt normaliza CRLF para LF. O repo é majoritariamente LF, mas restam alguns arquivos em CRLF (`Error.vue`, `Length.vue`, `Loading.vue`, `useProvide.ts`, `mergerUI.ts`); ao tocar num deles o diff sai como "arquivo inteiro reescrito". Isso é correção de desvio, não erro — mas vale avisar no relatório, porque assusta no diff.
 - `typeCheck` está desligado no `oxlint.config.ts`, então nenhum `typescript(TS2307)` deve aparecer. Se aparecer (imports de `.vue` em `test/**`, 11 hoje), alguém religou o `typeCheck`: o tsgolint não entende `.vue`. Não tente corrigir os imports; reporte.

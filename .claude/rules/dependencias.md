@@ -16,13 +16,13 @@
 
 ## O que fica para trás, e por quê
 
-| pacote                                  | fica em     | por quê                                                                                                                                                                                                    |
-| --------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `maska` (`dependencies`)                | `3.2.0`     | a 3.2.1 fez o `MaskInput` recusar todo `.type` fora de `text`/`search`/`url`/`tel`/`password` (issue #276 deles), e `<textarea>` é `"textarea"`. O `vMask` vira no-op no `RTextarea`: a 3.2.1 avisa no console, a 3.2.2 (PR #279) recusa calada |
-| `typescript`                            | 5.9.x       | o `@nuxt/module-builder` pede `^5.9.3`, e a 7.x (o port nativo) não expõe o `ts.sys` de que o compiler-sfc depende                                                                                          |
-| `h3` (docs)                             | 1.x         | o Nuxt 4 roda sobre h3 1; a 2 é a do Nitro 3                                                                                                                                                               |
-| `better-sqlite3` (docs)                 | 12.x        | a 13 não publica binário pré-compilado (0 assets da 13.0.0 à 13.0.3) e cai no node-gyp, que pede Python e toolchain C++                                                                                    |
-| `@intlify/bundle-utils`                 | 11.2.5      | a 11.2.7 (PR #622 do bundle-tools) passou a deixar intacta a forma antiga do arquivo de locale, e o caso de `test/unit/langFile.test.ts` que prova a quebra deixaria de ter o que provar. Um app no `@nuxtjs/i18n` 10.4 ainda roda o gerador antigo |
+| pacote                   | fica em | por quê                                                                                                                                                                                                                                             |
+| ------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maska` (`dependencies`) | `3.2.0` | a 3.2.1 fez o `MaskInput` recusar todo `.type` fora de `text`/`search`/`url`/`tel`/`password` (issue #276 deles), e `<textarea>` é `"textarea"`. O `vMask` vira no-op no `RTextarea`: a 3.2.1 avisa no console, a 3.2.2 (PR #279) recusa calada     |
+| `typescript`             | 5.9.x   | o `@nuxt/module-builder` pede `^5.9.3`, e a 7.x (o port nativo) não expõe o `ts.sys` de que o compiler-sfc depende                                                                                                                                  |
+| `h3` (docs)              | 1.x     | o Nuxt 4 roda sobre h3 1; a 2 é a do Nitro 3                                                                                                                                                                                                        |
+| `better-sqlite3` (docs)  | 12.x    | a 13 não publica binário pré-compilado (0 assets da 13.0.0 à 13.0.3) e cai no node-gyp, que pede Python e toolchain C++                                                                                                                             |
+| `@intlify/bundle-utils`  | 11.2.5  | a 11.2.7 (PR #622 do bundle-tools) passou a deixar intacta a forma antiga do arquivo de locale, e o caso de `test/unit/langFile.test.ts` que prova a quebra deixaria de ter o que provar. Um app no `@nuxtjs/i18n` 10.4 ainda roda o gerador antigo |
 
 **A `maska` já mordeu publicada.** O `^3.2.0` resolvia a 3.2.2 desde setembro de
 2026, então todo app que instalou o módulo nesse intervalo recebeu o `RTextarea`

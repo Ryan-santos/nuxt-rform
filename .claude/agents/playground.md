@@ -12,12 +12,12 @@ Prosa e comentários em **pt-BR**; código em inglês.
 
 ## Os quatro, e o que cada um prova
 
-| app | porta | eixo |
-|---|---|---|
-| [playgrounds/i18n](playgrounds/i18n/) | 3030 | `@nuxtjs/i18n` em foco: troca de idioma, packs do usuário, `tr`/`trRule`, `RDate` reformatando ao trocar de locale |
-| [playgrounds/basic](playgrounds/basic/) | 3031 | app comum **com** i18n: cadastro de ponta a ponta, `RDynamic` vindo de rota do Nitro, tela de edição/CRUD |
-| [playgrounds/standalone](playgrounds/standalone/) | 3032 | **sem** `@nuxtjs/i18n`: o motor de tradução próprio, packs em `app/rform/locales`, a assimetria do `~~` |
-| [playgrounds/ui](playgrounds/ui/) | 3033 | tokens `--rf-*`, `defineFieldDefaults`, `ui` por campo, `popover` do Dropdown |
+| app                                               | porta | eixo                                                                                                               |
+| ------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| [playgrounds/i18n](playgrounds/i18n/)             | 3030  | `@nuxtjs/i18n` em foco: troca de idioma, packs do usuário, `tr`/`trRule`, `RDate` reformatando ao trocar de locale |
+| [playgrounds/basic](playgrounds/basic/)           | 3031  | app comum **com** i18n: cadastro de ponta a ponta, `RDynamic` vindo de rota do Nitro, tela de edição/CRUD          |
+| [playgrounds/standalone](playgrounds/standalone/) | 3032  | **sem** `@nuxtjs/i18n`: o motor de tradução próprio, packs em `app/rform/locales`, a assimetria do `~~`            |
+| [playgrounds/ui](playgrounds/ui/)                 | 3033  | tokens `--rf-*`, `defineFieldDefaults`, `ui` por campo, `popover` do Dropdown                                      |
 
 **Escolher o app certo é metade do trabalho.** Um cenário de tradução vai para
 `i18n` ou `standalone`, nunca para `ui` — que não tem i18n de propósito, porque

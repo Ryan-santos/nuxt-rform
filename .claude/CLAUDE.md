@@ -2230,6 +2230,7 @@ vue-tsc -p test/fixtures/basic/.nuxt/tsconfig.app.json # a fixture (campos/utils
 
 - 4 espaços, aspas duplas, semicolons, `trailingComma: "none"`, `singleAttributePerLine: true`, `vueIndentScriptAndStyle: true`.
 - Sem `insertFinalNewline`.
+- `.md` e `.json` também passam pelo oxfmt, com duas travas. A primeira é `embeddedLanguageFormatting: "off"`, num `overrides` só de `*.md`: um bloco de código em markdown é recorte, e formatado como arquivo um `container: "…"` ganhava `;`. Na raiz ela desligaria também o `<script>` dos `.vue`. A segunda é `sortPackageJson: false`, porque o default reordena as chaves de topo e os `keywords`. O `CHANGELOG.md` fica fora, porque é do `changelogen`.
 
 ### Callback é `@evento`, nunca `:on-*`
 

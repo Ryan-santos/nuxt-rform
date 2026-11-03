@@ -30,41 +30,41 @@ Execute **imediatamente** quando invocado — sem perguntar se pode começar.
 
 ## Tipos
 
-| Quando usar | Código | Tipo |
-|---|---|---|
-| Novo recurso/funcionalidade | `:sparkles:` | feat |
-| Correção de bug | `:bug:` | fix |
-| Refatoração sem mudança funcional | `:recycle:` | refactor |
-| Melhorias por code review | `:ok_hand:` | review |
-| Formatação/estilo de código | `:art:` | style |
-| UI/estilo visual | `:lipstick:` | style |
-| Responsividade | `:iphone:` | style |
-| Performance | `:zap:` | perf |
-| Documentação | `:books:` | docs |
-| Comentários no código | `:bulb:` | docs |
-| Conteúdo textual/i18n | `:pencil:` | text |
-| Testes (suite/alterações) | `:test_tube:` | test |
-| Novos testes | `:white_check_mark:` | test |
-| Teste aprovado/validação | `:heavy_check_mark:` | test |
-| Configuração | `:wrench:` | chore |
-| Infra/CI-CD | `:bricks:` | ci |
-| Dependências (add/remove/up/down) | `:package:` `:heavy_plus_sign:` `:heavy_minus_sign:` `:arrow_up:` `:arrow_down:` | build |
-| Mover/renomear arquivos | `:truck:` | chore |
-| Limpeza de código | `:broom:` | cleanup |
-| Remover código/arquivos obsoletos | `:wastebasket:` | remove |
-| Reverter mudanças | `:boom:` | revert |
-| Trabalho em progresso | `:construction:` | wip |
-| Lista de ideias/planejamento | `:soon:` | chore |
-| Commit inicial | `:tada:` | init |
-| SEO | `:mag:` | seo |
-| Tipagem | `:label:` | feat/fix |
-| Tratamento de erros | `:goal_net:` | fix |
-| Segurança | `:lock:` | fix |
-| Acessibilidade | `:wheelchair:` | feat |
-| Animações/transições | `:dizzy:` | style |
-| Release/tag | `:bookmark:` | release |
-| Deploy | `:rocket:` | deploy |
-| Dados/arquivos raw | `:card_file_box:` | chore |
+| Quando usar                       | Código                                                                           | Tipo     |
+| --------------------------------- | -------------------------------------------------------------------------------- | -------- |
+| Novo recurso/funcionalidade       | `:sparkles:`                                                                     | feat     |
+| Correção de bug                   | `:bug:`                                                                          | fix      |
+| Refatoração sem mudança funcional | `:recycle:`                                                                      | refactor |
+| Melhorias por code review         | `:ok_hand:`                                                                      | review   |
+| Formatação/estilo de código       | `:art:`                                                                          | style    |
+| UI/estilo visual                  | `:lipstick:`                                                                     | style    |
+| Responsividade                    | `:iphone:`                                                                       | style    |
+| Performance                       | `:zap:`                                                                          | perf     |
+| Documentação                      | `:books:`                                                                        | docs     |
+| Comentários no código             | `:bulb:`                                                                         | docs     |
+| Conteúdo textual/i18n             | `:pencil:`                                                                       | text     |
+| Testes (suite/alterações)         | `:test_tube:`                                                                    | test     |
+| Novos testes                      | `:white_check_mark:`                                                             | test     |
+| Teste aprovado/validação          | `:heavy_check_mark:`                                                             | test     |
+| Configuração                      | `:wrench:`                                                                       | chore    |
+| Infra/CI-CD                       | `:bricks:`                                                                       | ci       |
+| Dependências (add/remove/up/down) | `:package:` `:heavy_plus_sign:` `:heavy_minus_sign:` `:arrow_up:` `:arrow_down:` | build    |
+| Mover/renomear arquivos           | `:truck:`                                                                        | chore    |
+| Limpeza de código                 | `:broom:`                                                                        | cleanup  |
+| Remover código/arquivos obsoletos | `:wastebasket:`                                                                  | remove   |
+| Reverter mudanças                 | `:boom:`                                                                         | revert   |
+| Trabalho em progresso             | `:construction:`                                                                 | wip      |
+| Lista de ideias/planejamento      | `:soon:`                                                                         | chore    |
+| Commit inicial                    | `:tada:`                                                                         | init     |
+| SEO                               | `:mag:`                                                                          | seo      |
+| Tipagem                           | `:label:`                                                                        | feat/fix |
+| Tratamento de erros               | `:goal_net:`                                                                     | fix      |
+| Segurança                         | `:lock:`                                                                         | fix      |
+| Acessibilidade                    | `:wheelchair:`                                                                   | feat     |
+| Animações/transições              | `:dizzy:`                                                                        | style    |
+| Release/tag                       | `:bookmark:`                                                                     | release  |
+| Deploy                            | `:rocket:`                                                                       | deploy   |
+| Dados/arquivos raw                | `:card_file_box:`                                                                | chore    |
 
 ## Exemplos
 

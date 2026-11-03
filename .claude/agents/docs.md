@@ -34,7 +34,7 @@ ou literal marcado (`~~brCpf`).
 Convenção em uso:
 
 - **chave `demo.<componente>.<coisa>`** para texto que uma pessoa lê;
-- **`~~`** quando o label *é* o código que o demo demonstra (`~~:length="4"`,
+- **`~~`** quando o label _é_ o código que o demo demonstra (`~~:length="4"`,
   `~~brCpf`, `~~{ name: 'min', min: 3 }`).
 
 Toda chave nova entra em **`pt.json` e `en.json`**. O `pnpm test:types` cobra.

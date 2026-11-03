@@ -14,6 +14,7 @@ Ao definir o objeto `ui` (classes Tailwind) de um componente, o usuário exige d
 **Why:** O `ui` do `Utils/Calendar.vue` estava achatado (`dayToday`, etc.) e o tipo `Props.ui` reescrevia toda a estrutura à mão, duplicando o `defaults`. O usuário pediu hierarquia e depois a extração do `defaultUi` para eliminar a duplicação tipo↔valor.
 
 **How to apply:**
+
 - Componentes regulares que usam `Element<typeof defaults>` já ganham `ui?: DeepPartial<OBJ["ui"]>` de graça (ver `src/runtime/type.d.ts`) e já são hierárquicos — não precisam do `defaultUi`.
 - O padrão `defaultUi` só vale para os `Utils/*` (Label, Error, Loading, Dropdown, Length, Placeholder, Calendar) que definem `Props` na mão.
 - Cuidado com tipos abertos: em `Length`, `percentages` deve continuar `Record<number, string>` (anotar o valor com `as Record<number, string>` no `defaultUi`) para não travar as chaves em `60/80/100`.
