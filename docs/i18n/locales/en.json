@@ -233,6 +233,16 @@
             "porMes": "R$ {preco}/month",
             "erro": "That option is not available in your region."
         },
+        "checkbox": {
+            "receberNovidades": "Get product news by e-mail",
+            "sessao": "Session",
+            "lembrarDeMim": "Remember me",
+            "dias": "Business days",
+            "interesses": "Interests",
+            "canais": "Notification channels",
+            "liEAceito": "I have read and accept the terms",
+            "erro": "That option is locked by the current plan."
+        },
         "presets": {
             "uf": "Use the two-letter state code, in capitals: SP, RJ, BA."
         },

@@ -218,6 +218,26 @@
                 />
             </RForm>
         </Scenario>
+
+        <Scenario
+            title="checkbox"
+            :value="checkbox"
+        >
+            <RForm
+                v-model="checkbox"
+                class="flex flex-col gap-4"
+            >
+                <RCheckbox
+                    name="novidades"
+                    placeholder="form.novidades"
+                />
+                <RCheckbox
+                    name="dias"
+                    label="form.dias"
+                    :options="['seg', 'ter', 'qua', 'qui', 'sex']"
+                />
+            </RForm>
+        </Scenario>
     </div>
 </template>
 
@@ -256,4 +276,6 @@
     ];
 
     const radio = ref<Record<string, unknown>>({});
+
+    const checkbox = ref<Record<string, unknown>>({});
 </script>

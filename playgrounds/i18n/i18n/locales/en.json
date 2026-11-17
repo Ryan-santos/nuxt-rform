@@ -17,7 +17,9 @@
         "aceiteTermos": "I have read and accept the terms",
         "plano": "Plan",
         "tamanho": "Size",
-        "corFavorita": "Favorite color"
+        "corFavorita": "Favorite color",
+        "novidades": "I want to receive news",
+        "dias": "Days"
     },
     "empresa": {
         "razaoSocial": "Legal name",

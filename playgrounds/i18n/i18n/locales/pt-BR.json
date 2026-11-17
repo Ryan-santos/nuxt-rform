@@ -17,7 +17,9 @@
         "aceiteTermos": "Li e aceito os termos",
         "plano": "Plano",
         "tamanho": "Tamanho",
-        "corFavorita": "Cor favorita"
+        "corFavorita": "Cor favorita",
+        "novidades": "Quero receber novidades",
+        "dias": "Dias"
     },
     "empresa": {
         "razaoSocial": "Razão social",

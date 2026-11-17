@@ -68,6 +68,8 @@ export type FieldContext<T extends Element, S = T["modelValue"], G = T["modelVal
 type Options<T extends Element, S, G> = {
     set?: (value: T["modelValue"]) => S;
     get?: (value: T["modelValue"]) => G;
+    /** Reescreve o `default` mesclado — o que o seed e o fallback do model entregam. */
+    default?: (value: unknown) => unknown;
 };
 
 /**
@@ -143,7 +145,7 @@ export default function useField<T extends Element, S = T["modelValue"], G = T["
     const errorsBag = injectErrorsBag();
 
     const cloneDefault = (): unknown => {
-        const def = props.value.default;
+        const def = opts?.default ? opts.default(props.value.default) : props.value.default;
         if (def !== null && typeof def === "object") {
             return structuredClone(def);
         }

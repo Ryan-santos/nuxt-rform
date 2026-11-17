@@ -1,0 +1,12 @@
+<template>
+    <RCheckbox
+        name="novidades"
+        placeholder="demo.checkbox.receberNovidades"
+    />
+    <RCheckbox
+        name="lembrar"
+        label="demo.checkbox.sessao"
+        placeholder="demo.checkbox.lembrarDeMim"
+        :default="true"
+    />
+</template>

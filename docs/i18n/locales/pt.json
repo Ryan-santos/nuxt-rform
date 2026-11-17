@@ -233,6 +233,16 @@
             "porMes": "R$ {preco}/mês",
             "erro": "Essa opção não está disponível na sua região."
         },
+        "checkbox": {
+            "receberNovidades": "Receber e-mails de novidades",
+            "sessao": "Sessão",
+            "lembrarDeMim": "Lembrar de mim",
+            "dias": "Dias de atendimento",
+            "interesses": "Interesses",
+            "canais": "Canais de aviso",
+            "liEAceito": "Li e aceito os termos",
+            "erro": "Essa opção está bloqueada pelo plano atual."
+        },
         "presets": {
             "uf": "Use a sigla da UF, em maiúsculas: SP, RJ, BA."
         },

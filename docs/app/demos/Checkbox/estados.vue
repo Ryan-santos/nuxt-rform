@@ -1,0 +1,26 @@
+<template>
+    <RCheckbox
+        name="aceite"
+        label="demo.common.obrigatorio"
+        placeholder="demo.checkbox.liEAceito"
+        required
+        rule="required"
+    />
+    <RCheckbox
+        name="canais"
+        label="demo.checkbox.canais"
+        :options="['e-mail', 'sms', 'push']"
+        required
+        rule="required"
+    />
+    <RCheckbox
+        name="desabilitado"
+        placeholder="demo.common.desabilitado"
+        disabled
+    />
+    <RCheckbox
+        name="comErro"
+        placeholder="demo.common.erroManual"
+        error="demo.checkbox.erro"
+    />
+</template>

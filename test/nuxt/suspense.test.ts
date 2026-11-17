@@ -3,7 +3,7 @@ import { mountSuspended } from "@nuxt/test-utils/runtime";
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, ref, Suspense, type Component } from "vue";
 
-import { RDate, RHour, RNumber, RRadio, RText, RTextarea } from "#components";
+import { RCheckbox, RDate, RHour, RNumber, RRadio, RText, RTextarea } from "#components";
 // O fixture substitui o `Switch` embutido; este só chega pelo alias.
 import RSwitch from "#rform/builtin/fields/Switch.vue";
 
@@ -179,6 +179,34 @@ describe("campo dentro de Suspense pendente (issue #6)", () => {
         );
 
         await write("anual");
+        await resolve();
+
+        const inputs = branch().querySelectorAll("input");
+        expect(inputs[0]!.checked).toBe(false);
+        expect(inputs[1]!.checked).toBe(true);
+    });
+
+    it("RCheckbox mantém o checked escrito antes do resolve", async () => {
+        const { field, write, resolve } = await mountPending(
+            RCheckbox as unknown as Component,
+            { name: "aceite" },
+            false
+        );
+
+        await write(true);
+        await resolve();
+
+        expect(field()!.checked).toBe(true);
+    });
+
+    it("RCheckbox com options mantém a lista escrita antes do resolve", async () => {
+        const { branch, write, resolve } = await mountPending(
+            RCheckbox as unknown as Component,
+            { name: "dias", options: ["seg", "ter"] },
+            []
+        );
+
+        await write(["ter"]);
         await resolve();
 
         const inputs = branch().querySelectorAll("input");

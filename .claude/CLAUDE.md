@@ -86,6 +86,7 @@ Os `import()` de `.vue` nos templates de tipo saem **relativos**. O `@vue/compil
 - O `get()` **clona** o `default` no fallback. `props.value.default` é o próprio objeto que o componente declarou em escopo de módulo — o `merger` copia objeto e array por referência quando a chave existe numa fonte só. Entregá-lo cru deixava um filho escrever direto nele (um `RObject` destacado, cujo índice acabou de ser removido, ainda lê por ali), poluindo o default de toda instância seguinte no processo. O `??` mantém o clone preguiçoso.
 - O `seed()` desiste quando o índice está **além do fim** do array — o array acabou de encolher (um splice do botão de remover, ou um reset que devolveu o default vazio). Semear ali ressuscitaria o slot: o watcher é `flush: "sync"`, então roda antes de o `v-for` desmontar o item, e `arr[length] = default` cresce o array de novo.
 - **As rules vêm de `#rform/presets`, dinâmico; as masks vêm de `#rform/masks`, estático.** Toda rule importa zod, então um import estático delas poria zod no caminho crítico de qualquer página com campo, validado ou não. Uma **mask não**: ela é um objeto literal e o `defineMask` é a identidade, então as oito custam nada. Foi essa separação que tirou o último `await` da composable — o `mask` está resolvido no primeiro render sem esperar chunk nenhum. Com a tabela vazia o nome do preset iria **cru** para o maska, que o lê como pattern de literais: `test/nuxt/mask.test.ts` monta síncrono e digita sem `await`, e sem a tabela o input volta `"brCpf"`.
+- **`opts.default` reescreve o `default` mesclado** antes de o seed e o fallback do model o entregarem — é o que dá `[]` ao `RCheckbox` com `options`.
 - O `fn` que o campo registra no `rulesList` **só devolve a mensagem**: não escreve no `error` e não lança. Quem escreve é o `errorsBag` (adiante), e é isso que mata os dois escritores concorrentes do mesmo slot — e a unhandled rejection do `@submit.prevent`.
 - `upperId`/`id` são montados **antes** do `useModel`, e não mais depois do `provide(keyProp)`: o setter do model precisa do `id` para descartar a entrada do bag. Sem mudança de comportamento — `id` só lê `sourceProps.name` e `upper`, ambos prontos ali.
 - A composable é **síncrona**, e é a assinatura que paga por isso: `useField(sourceProps, opts, injected)`, com o **último escrito pelo `src/vite.plugin.ts`** e nunca pelo campo. O `injected` é `{ name, defaults }` — um parâmetro, e não os dois soltos que isto já foi: eles nascem juntos, chegam juntos e o `Injected<N, D>` que os tipa é o mesmo nas duas composables, que passaram a ter a mesma forma de guard. Buscar o `defaults` no registry era o `await` que sobrava, e ele custava uma dependência de Suspense por campo montado. Um `await useField(...)` num campo escrito antes disso continua funcionando — `await` sobre não-promise é a identidade —, só não ganha nada e devolve aquele componente ao Suspense; `test/unit/templates.test.ts` o reprova nos `.vue` deste repo.
@@ -682,16 +683,29 @@ Não havia **nenhum** teste montando o `RFile`, e a lista é a prova do que isso
 - **`<Icon name="close" />` nunca existiu** na lista de aliases do `module.ts`. Os cinco novos são `file`, `image`, `upload`, `retry` e `cancel`; remover continua sendo o `remove` que o `RArray` já usa.
 - **`useIsURL(model.value as unknown as string)`** rodava um regex sobre um `File` ou sobre um array coagido a string. Funcionava por acidente.
 
-### `RRadio`: as opções do `RSelect`, sempre visíveis
+### `RRadio` e `RCheckbox`: as opções do `RSelect`, sempre visíveis
 
-Aceita os três formatos de `options` e o `pick` do `RSelect`, e passa pelo mesmo
-`normalizeOptions`. Os aliases de tipo (`OptionOf`, `ValueOf`, `LabelOf`,
+Os dois aceitam os três formatos de `options` e o `pick` do `RSelect`, e passam pelo
+mesmo `normalizeOptions`. Os aliases de tipo (`OptionOf`, `ValueOf`, `LabelOf`,
 `OptionKey`…) desceram do `Select.vue` para `src/runtime/type.d.ts` por isso; o
 `Select.vue` ainda os reexporta, para o `#rform/builtin/fields/Select.vue` continuar
 alcançando. `SelectedOf`/`ModelOf` ficaram lá: `modelFull` e `multiple` são só dele.
 
 A identidade de uma opção é o `keyOf`, a mesma do `RSelect` — `1` e `"1"` são opções
-diferentes. O input é `:checked` + `@change`, nunca `v-model`. Guarda de tipo em
+diferentes. Os inputs são `:checked` + `@change`, nunca `v-model`.
+
+**O model do `RCheckbox` depende de `options`**: sem, é booleano (`default: false`);
+com, é a lista dos `value` marcados. `defaults.default` é estático, então a lista
+sai de dois seams do `useField` sobre `_props.options` cru: `opts.default` troca o
+`false` do componente por `[]` (é o que o seed escreve, então o form nunca vê o
+`false`), e `opts.get` normaliza um não-array vindo de fora. Só o `get`, como no
+`multiple` do `RFile`, não bastava: o seed escreve o `default` sem passar por ele, e
+um campo intocado mandava `dias: false` — tipo errado para o `@submit` e reprovação
+de um `z.array()` no `:rules` agregado. Marcar monta um array novo, nunca `push`: um `push` não
+passaria pelo setter e não limparia o erro do campo.
+
+O tipo do model sai de `[Opts] extends [never]`, com `Opts` default `never`: sem
+`options` não há site de inferência, e o default decide. Guarda em
 `test/fixtures/basic/components/RadioTypes.vue`.
 
 ### Presets (rules e masks)
