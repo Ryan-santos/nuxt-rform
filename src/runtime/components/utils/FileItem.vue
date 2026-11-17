@@ -102,7 +102,7 @@
     import { computed, onUnmounted, ref, watch } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial, FileEntry, TextTree } from "#rform/types";
+    import type { DeepPartialUI, FileEntry, TextTree } from "#rform/types";
     import { defineDefaults, formatBytes, icon } from "#rform/utils";
 
     const ui = {
@@ -152,7 +152,7 @@
     };
 
     export type Props = {
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
         text?: TextTree<Text>;
         /** Herdado do campo pelo merge de props do `useUtil`. */
         disabled?: boolean;

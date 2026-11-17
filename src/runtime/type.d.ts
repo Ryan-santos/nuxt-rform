@@ -53,12 +53,49 @@ export type DeepPartial<T> = {
 };
 
 /**
- * O inverso do `DeepPartial`: o que um `ui` parcial vira depois de mesclado sobre
- * os defaults completos — toda chave presente, em toda profundidade.
+ * Uma folha de classe do `ui` escrito pelo app. `null` zera a camada, e num array
+ * zera o que veio antes dele — `[null, "grid"]` troca a camada inteira por `grid`.
  */
-export type DeepRequired<T> = T extends object
-    ? { [P in keyof T]-?: DeepRequired<NonNullable<T[P]>> }
-    : T;
+export type UIClass = string | null | (string | null)[];
+
+/**
+ * O `ui` que um call site ou o `defineFieldDefaults` escreve: parcial em toda
+ * profundidade, e toda folha de classe é `UIClass`. Grupo não aceita `null`: o
+ * template lê através dele.
+ *
+ * @example DeepPartialUI<{ container: string, group: { input: string } }>
+ * // → { container?: UIClass, group?: { input?: UIClass } }
+ */
+export type DeepPartialUI<T> = {
+    [P in keyof T]?: T[P] extends string
+        ? UIClass
+        : T[P] extends object
+          ? DeepPartialUI<T[P]>
+          : T[P];
+};
+
+/**
+ * O `ui` que um campo lê: a forma parcial do `DeepPartialUI`, com toda `UIClass`
+ * já resolvida em string pelo `mergerUI`.
+ */
+export type ResolvedUI<T> = unknown extends T
+    ? T
+    : T extends UIClass
+      ? string
+      : T extends object
+        ? { [P in keyof T]: ResolvedUI<T[P]> }
+        : T;
+
+/**
+ * O inverso do `DeepPartialUI`: o que um `ui` parcial vira depois de mesclado sobre
+ * os defaults completos — toda chave presente, em toda profundidade, e o array de
+ * uma `UIClass` já resolvido em string pelo `mergerUI`.
+ */
+export type DeepRequired<T> = T extends readonly unknown[]
+    ? string
+    : T extends object
+      ? { [P in keyof T]-?: DeepRequired<NonNullable<T[P]>> }
+      : T;
 
 /**
  * Espelha a árvore de `defaults.text` na prop que a carrega, virando toda folha um
@@ -105,7 +142,7 @@ export type Element<OBJ extends Base = Base, C = any, D = ConvertNeverToUnknown<
     loading?: boolean;
     disabled?: boolean;
     default?: D;
-    ui?: DeepPartial<OBJ["ui"]>;
+    ui?: DeepPartialUI<OBJ["ui"]>;
     modelValue?: D;
     "onUpdate:modelValue"?: <T extends D>($event: T) => void;
 };

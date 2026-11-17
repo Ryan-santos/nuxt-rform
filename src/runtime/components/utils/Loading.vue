@@ -14,7 +14,7 @@
      * Indicador de carregamento, ligado enquanto uma validação async está em voo.
      */
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial } from "#rform/types";
+    import type { DeepPartialUI } from "#rform/types";
     import { defineDefaults, icon } from "#rform/utils";
 
     const ui = {
@@ -34,7 +34,7 @@
 
     export type Props = {
         loading?: boolean;
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 </script>
 

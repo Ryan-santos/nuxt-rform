@@ -14,7 +14,7 @@
     import { computed, watch } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial } from "#rform/types";
+    import type { DeepPartialUI } from "#rform/types";
     import { defineDefaults } from "#rform/utils";
 
     const ui = {
@@ -31,7 +31,7 @@
 
     export type Props = {
         length?: number | string;
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 </script>
 

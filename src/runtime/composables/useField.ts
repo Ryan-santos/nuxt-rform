@@ -17,7 +17,7 @@ import userDefaults from "#rform/defaults";
 // ela não paga o import dinâmico que as rules obrigam.
 import { masks } from "#rform/masks";
 import { components as registry, hooks } from "#rform/registry";
-import type { Element } from "#rform/types";
+import type { Element, ResolvedUI } from "#rform/types";
 import type Components from "#rform/types/components";
 import { hookUi, merger, prefixText, resolveMask, resolveRule, type MaskRef } from "#rform/utils";
 
@@ -38,10 +38,12 @@ export const key = Symbol() as InjectionKey<Value>;
 
 /**
  * O que sai do merger: as props do campo com o `error` já resolvido — na entrada ele
- * é `TrInput`, e quem o traduz é este arquivo.
+ * é `TrInput`, e quem o traduz é este arquivo — e o `ui` com cada `UIClass` já
+ * virada string.
  */
-export type FieldProps<T extends object = object> = Omit<Element & T, "error"> & {
+export type FieldProps<T extends object = object> = Omit<Element & T, "error" | "ui"> & {
     error?: string;
+    ui?: T extends { ui?: infer U } ? ResolvedUI<U> : Element["ui"];
 };
 
 export type ValueProp<T extends object = object> = {

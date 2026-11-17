@@ -54,7 +54,7 @@
     } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial } from "#rform/types";
+    import type { DeepPartialUI } from "#rform/types";
     import { defineDefaults, dropdownMiddleware } from "#rform/utils";
 
     let lockCount = 0;
@@ -173,7 +173,7 @@
     export const defaults = defineDefaults({ ui });
 
     export type Props = {
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 </script>
 

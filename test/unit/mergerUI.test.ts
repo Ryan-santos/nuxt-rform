@@ -33,6 +33,29 @@ describe("mergerUI", () => {
         expect(result).toEqual({ root: null });
     });
 
+    it("null zera a camada, e uma classe depois dele parte do zero", () => {
+        const result = mergerUI({ root: "p-2 flex" }, { root: null }, { root: "grid" });
+        expect(result).toEqual({ root: "grid" });
+    });
+
+    it("null dentro de um array zera o que veio antes e mantém o resto", () => {
+        expect(mergerUI({ root: "p-2 flex" }, { root: [null, "grid"] })).toEqual({ root: "grid" });
+        expect(mergerUI({ root: "p-2" }, { root: ["flex", null, "grid"] })).toEqual({
+            root: "grid"
+        });
+    });
+
+    it("array sem null mescla como string", () => {
+        expect(mergerUI({ root: "p-2 flex" }, { root: ["p-4", "gap-2"] })).toEqual({
+            root: "flex p-4 gap-2"
+        });
+    });
+
+    it("null numa folha não toca as irmãs", () => {
+        const result = mergerUI({ root: "p-2", label: "text-sm" }, { root: null });
+        expect(result).toEqual({ root: null, label: "text-sm" });
+    });
+
     it("desce em ui de objeto aninhado", () => {
         const result = mergerUI(
             { Utils: { Label: { root: "text-red-500" } } },

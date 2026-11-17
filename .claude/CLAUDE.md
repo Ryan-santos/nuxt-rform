@@ -445,6 +445,30 @@ Entra no `merger` entre o `defaults` do componente e as props do call site, ent�
 
 O nome `defineFieldDefaults` está hardcoded em dois lugares fora do código: o selector de callee do `better-tailwindcss` em `oxlint.config.ts` e o `tailwindCSS.experimental.classRegex` em `.vscode/settings.json`. Renomear o helper sem mexer nos dois faz lint de classe e IntelliSense **pararem calados** dentro do `defaults.ts`. O `path` do matcher é `(^|\.)ui(\.|$)` — ancorado por segmento, então pega `ui.container`, `Text.ui.label.required` e `Utils.Placeholder.ui.default`, e deixa `Text.default` (que não é classe) de fora.
 
+### `null` no `ui` é contrato, e o tipo diz isso
+
+Toda folha de classe de um `ui` escrito pelo app é `UIClass` (`string | null |
+(string | null)[]`), no call site e no `defineFieldDefaults`. `null` zera a camada; num
+array zera o que veio **antes** dele, então `[null, "grid"]` troca a camada inteira
+por `grid` sem herdar nada do default. Grupo não aceita `null` — o template lê
+através dele, e `group: null` derrubaria o campo.
+
+O array precisou de runtime: o `twMerge` pula `null`, então `twMerge("p-2", [null,
+"grid"])` dava `"p-2 grid"`. Quem resolve é o `mergeLeaf` do `mergerUI`, que reduz a
+folha da esquerda para a direita reiniciando em `null`.
+
+**A entrada e a leitura têm tipos diferentes**, como o `error`: o `Props` declara
+`DeepPartialUI` (com o array), e o que o componente lê sai do merge já em string —
+`ResolvedUI` no `FieldProps`, `DeepRequired` no `useUtil`. Sem essa volta, toda folha
+que não é `class` (os nomes do `<Transition>`, o `ui.icon.name` do `RUtilsError`)
+deixa de compilar. O `null` também some na leitura, e é a mesma mentira de antes:
+`:class` o aceita, e quem zera uma folha que não é classe pediu por isso.
+
+`ResolvedUI` olha só o `ui` do `T` do campo, nunca o do `Element` base: aquele é
+`string | Record`, e a interseção distribuiria um ramo `string` por todo campo.
+
+A guarda de tipo é `test/fixtures/basic/components/UiNullTypes.vue`.
+
 ### Tema: cores e radius (`src/runtime/style.css`)
 
 Nenhum `ui` do módulo usa token semântico do Tailwind. Toda cor e todo radius passam por variável própria, em forma de arbitrary property:

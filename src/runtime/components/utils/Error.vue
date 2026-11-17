@@ -18,7 +18,7 @@
      * resolvida, e o `error` do call site quem traduz é o `useField`.
      */
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial, TrInput } from "#rform/types";
+    import type { DeepPartialUI, TrInput } from "#rform/types";
     import { defineDefaults, icon } from "#rform/utils";
 
     // Sem sentinela `error: ""`, como no Label: `error` é `TrInput`, e num app com
@@ -35,7 +35,7 @@
 
     export type Props = {
         error?: TrInput;
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 </script>
 

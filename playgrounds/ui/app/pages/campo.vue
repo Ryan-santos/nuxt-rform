@@ -139,12 +139,10 @@
 <script setup lang="ts">
     import { ref } from "vue";
 
-    // `null` limpa a camada no `mergerUI`, mas o tipo de `ui` só admite
-    // `string | undefined` — daí o cast, que o template não sabe fazer sozinho.
     const semWrapper = {
         group: {
             wrapper: {
-                container: null as unknown as string
+                container: null
             }
         }
     };

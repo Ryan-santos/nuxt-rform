@@ -25,7 +25,7 @@
     import { computed } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial, TrInput } from "#rform/types";
+    import type { DeepPartialUI, TrInput } from "#rform/types";
     import { defineDefaults } from "#rform/utils";
 
     const ui = {
@@ -46,7 +46,7 @@
     export type Props = {
         placeholder?: TrInput;
         label?: TrInput;
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 </script>
 

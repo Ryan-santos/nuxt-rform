@@ -162,7 +162,7 @@
     import { computed, ref, watch } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial, TextProp } from "#rform/types";
+    import type { DeepPartialUI, TextProp } from "#rform/types";
     import { dateFormat, defineDefaults, inputValue, vMask, icon } from "#rform/utils";
 
     import { formatTime, pad, parseTime } from "../fields/Hour.vue";
@@ -332,7 +332,7 @@
         mode?: Mode;
         time?: boolean;
         disable?: DisableSpec;
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 
     const stripTime = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());

@@ -2,12 +2,21 @@ import { twMerge } from "tailwind-merge";
 
 import type { Base } from "#rform/types";
 
+// `null` zera o que veio antes, inclusive dentro de um array: `[null, "grid"]`
+// troca a camada inteira por `grid`. Sem isso o `twMerge` pularia o `null`.
+const mergeLeaf = (...values: unknown[]) =>
+    values
+        .flat()
+        .reduce<string>((acc, value) => (value === null ? "" : twMerge(acc, value as string)), "");
+
 /**
  * Mescla blocos de `ui` folha a folha, passando cada classe pelo `twMerge`.
- * Numa fonte, `undefined` é "não passei"; `null` é "zera esta chave".
+ * Numa fonte, `undefined` é "não passei"; `null` é "zera esta chave", e num
+ * array zera o que veio antes dele.
  *
  * @example mergerUI({ container: "p-2 gap-1" }, { container: "p-4" }) // → { container: "gap-1 p-4" }
  * @example mergerUI({ container: "p-2" }, { container: null }) // → { container: null }
+ * @example mergerUI({ container: "p-2" }, { container: [null, "grid"] }) // → { container: "grid" }
  */
 export default function mergerUI<T extends (Base["ui"] | undefined)[], I = NonNullable<T[number]>>(
     ...objects: T
@@ -35,7 +44,7 @@ export default function mergerUI<T extends (Base["ui"] | undefined)[], I = NonNu
             if (source[key] !== undefined) {
                 if (source[key] !== null) {
                     if (typeof source[key] === "string" || Array.isArray(source[key])) {
-                        result[key] = twMerge(result[key] as string, source[key] as string);
+                        result[key] = mergeLeaf(result[key], source[key]);
                     } else {
                         result[key] = mergerUI(
                             result[key] as Record<string, unknown>,

@@ -18,7 +18,7 @@
      * Rótulo do campo. Só renderiza quando o campo tem `label`.
      */
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial, TrInput } from "#rform/types";
+    import type { DeepPartialUI, TrInput } from "#rform/types";
     import { defineDefaults } from "#rform/utils";
 
     // Sem sentinela `label: ""`: `label` é `TrInput`, e num app com i18n esse tipo é
@@ -33,7 +33,7 @@
 
     export type Props = {
         label?: TrInput;
-        ui?: DeepPartial<typeof defaults.ui>;
+        ui?: DeepPartialUI<typeof defaults.ui>;
     };
 </script>
 

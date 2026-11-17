@@ -44,7 +44,7 @@ const build = <P extends Record<string, unknown>>(
     const props = computed((): UtilProps<P> => {
         const { ui, ...rest } = upper.props.value;
 
-        const utilUi = typeof ui === "object" ? (ui?.Utils as Utils) : undefined;
+        const utilUi = typeof ui === "object" ? (ui as { Utils?: Utils } | null)?.Utils : undefined;
 
         const merged = merger(prefixed, overrides, {
             ...rest,
