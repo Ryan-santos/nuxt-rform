@@ -243,6 +243,20 @@
             "liEAceito": "I have read and accept the terms",
             "erro": "That option is locked by the current plan."
         },
+        "password": {
+            "senha": "Password",
+            "novaSenha": "New password",
+            "usuario": "Username",
+            "oitoCaracteres": "At least 8 characters",
+            "minuscula": "A lowercase letter",
+            "maiuscula": "An uppercase letter",
+            "numero": "A number",
+            "simbolo": "A symbol",
+            "semUsuario": "Does not contain the username",
+            "escutando": "Only {'@'}generate",
+            "recebeu": "{'@'}generate received: {value}",
+            "erro": "That password has been used before."
+        },
         "presets": {
             "uf": "Use the two-letter state code, in capitals: SP, RJ, BA."
         },

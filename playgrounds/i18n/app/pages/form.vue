@@ -238,11 +238,40 @@
                 />
             </RForm>
         </Scenario>
+
+        <Scenario
+            title="password"
+            :value="password"
+        >
+            <RForm
+                v-model="password"
+                class="flex flex-col gap-4"
+            >
+                <RPassword
+                    name="senha"
+                    label="form.senha"
+                    placeholder="form.senhaPlaceholder"
+                    autocomplete="new-password"
+                    strength
+                    :generate="{ symbols: '@$!%*?&' }"
+                    :checklist="requisitos"
+                />
+
+                <button
+                    type="submit"
+                    class="w-fit cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm text-white"
+                >
+                    {{ $t("form.enviar") }}
+                </button>
+            </RForm>
+        </Scenario>
     </div>
 </template>
 
 <script setup lang="ts">
     import { ref } from "vue";
+
+    import type { ChecklistItem } from "#rform/builtin/fields/Password.vue";
 
     const users = [
         {
@@ -275,7 +304,23 @@
         { id: 3, nome: "Empresa" }
     ];
 
+    // Tipado pelo `ChecklistItem` do embutido: sem isso o `label` alarga para `string`,
+    // e `TrInput` recusa.
+    const requisitos: ChecklistItem[] = [
+        { label: "form.requisitos.min", rule: { name: "min", min: 8 } },
+        { label: "form.requisitos.minuscula", rule: { name: "regex", pattern: "[a-z]" } },
+        { label: "form.requisitos.maiuscula", rule: { name: "regex", pattern: "[A-Z]" } },
+        { label: "form.requisitos.numero", rule: { name: "regex", pattern: "[0-9]" } },
+        { label: "form.requisitos.simbolo", rule: { name: "regex", pattern: "[@$!%*?&]" } },
+        {
+            label: "form.requisitos.permitidos",
+            rule: { name: "regex", pattern: "^[A-Za-z0-9@$!%*?&]*$" }
+        }
+    ];
+
     const radio = ref<Record<string, unknown>>({});
 
     const checkbox = ref<Record<string, unknown>>({});
+
+    const password = ref<Record<string, unknown>>({});
 </script>

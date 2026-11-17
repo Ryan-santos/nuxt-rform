@@ -22,8 +22,10 @@ export default function focusFirstError(root: HTMLElement | null | undefined) {
         return undefined;
     }
 
-    // O `v-if` do `RUtilsError` garante que só campo com erro tem um.
-    const message = root.querySelector(".RUtilsError");
+    // O `v-if` do `RUtilsError` garante que só campo com erro tem um. O
+    // `[data-rform-error]` é de quem mostra o erro por outro caminho — a lista do
+    // `RPassword`.
+    const message = root.querySelector(".RUtilsError, [data-rform-error]");
     const field = message?.closest(".RField");
 
     if (!field) {

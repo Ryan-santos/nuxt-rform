@@ -87,6 +87,7 @@ Os `import()` de `.vue` nos templates de tipo saem **relativos**. O `@vue/compil
 - O `seed()` desiste quando o índice está **além do fim** do array — o array acabou de encolher (um splice do botão de remover, ou um reset que devolveu o default vazio). Semear ali ressuscitaria o slot: o watcher é `flush: "sync"`, então roda antes de o `v-for` desmontar o item, e `arr[length] = default` cresce o array de novo.
 - **As rules vêm de `#rform/presets`, dinâmico; as masks vêm de `#rform/masks`, estático.** Toda rule importa zod, então um import estático delas poria zod no caminho crítico de qualquer página com campo, validado ou não. Uma **mask não**: ela é um objeto literal e o `defineMask` é a identidade, então as oito custam nada. Foi essa separação que tirou o último `await` da composable — o `mask` está resolvido no primeiro render sem esperar chunk nenhum. Com a tabela vazia o nome do preset iria **cru** para o maska, que o lê como pattern de literais: `test/nuxt/mask.test.ts` monta síncrono e digita sem `await`, e sem a tabela o input volta `"brCpf"`.
 - **`opts.default` reescreve o `default` mesclado** antes de o seed e o fallback do model o entregarem — é o que dá `[]` ao `RCheckbox` com `options`.
+- **`opts.rule` é o seam para o campo acrescentar validação própria**, na mesma forma do `get`/`set`: recebe o `rule` do call site e devolve o que registrar, dentro do `watch` do `rule`. Quem usa é o `RPassword`, que devolve `[checklistRule, ...rule]`. Em forma de método no call site, pela mesma regex do `src/vite.plugin.ts` que o `opts` do `File` respeita.
 - O `fn` que o campo registra no `rulesList` **só devolve a mensagem**: não escreve no `error` e não lança. Quem escreve é o `errorsBag` (adiante), e é isso que mata os dois escritores concorrentes do mesmo slot — e a unhandled rejection do `@submit.prevent`.
 - `upperId`/`id` são montados **antes** do `useModel`, e não mais depois do `provide(keyProp)`: o setter do model precisa do `id` para descartar a entrada do bag. Sem mudança de comportamento — `id` só lê `sourceProps.name` e `upper`, ambos prontos ali.
 - A composable é **síncrona**, e é a assinatura que paga por isso: `useField(sourceProps, opts, injected)`, com o **último escrito pelo `src/vite.plugin.ts`** e nunca pelo campo. O `injected` é `{ name, defaults }` — um parâmetro, e não os dois soltos que isto já foi: eles nascem juntos, chegam juntos e o `Injected<N, D>` que os tipa é o mesmo nas duas composables, que passaram a ter a mesma forma de guard. Buscar o `defaults` no registry era o `await` que sobrava, e ele custava uma dependência de Suspense por campo montado. Um `await useField(...)` num campo escrito antes disso continua funcionando — `await` sobre não-promise é a identidade —, só não ganha nada e devolve aquele componente ao Suspense; `test/unit/templates.test.ts` o reprova nos `.vue` deste repo.
@@ -707,6 +708,39 @@ passaria pelo setter e não limparia o erro do campo.
 O tipo do model sai de `[Opts] extends [never]`, com `Opts` default `never`: sem
 `options` não há site de inferência, e o default decide. Guarda em
 `test/fixtures/basic/components/RadioTypes.vue`.
+
+### `RPassword`: a lista de requisitos também valida
+
+`checklist: { label, rule }[]` aceita qualquer `rule`. Os requisitos de classe de
+caractere saem da rule genérica `regex` (`{ name: "regex", pattern }`), e não de
+cinco presets específicos.
+
+**Ao vivo**, um `watch` do model roda os itens (o mesmo `import("#rform/presets")` do
+`useField`) e guarda um `boolean` por índice; o token `++token` descarta a avaliação
+de uma tecla velha. Só o model é observado: um item que lê o `form` não remarca
+quando outro campo muda. **Campo vazio deixa a lista neutra**: vazio é do `required`.
+
+**No submit**, a lista vira uma rule a mais pelo `opts.rule`, e **na frente** do
+`rule` do call site — o array para no primeiro erro, e um `min: 12` reprovando antes
+deixaria os requisitos sem virar erro. O `checklistRule` toma o mesmo token da
+avaliação ao vivo (uma tecla no meio do submit vence), liga `attempted` e, havendo
+falha, devolve
+`tr("rform.fields.password.checklist")`. Daí em diante o que falta renderiza como
+`failed`, e volta a `met` conforme é corrigido. **Quem fala é a lista**: o
+`RUtilsError` cala quando a mensagem do bag é a última que a lista empurrou —
+comparada com o ref que guardou a string, e não com um `tr()` na hora, que trocaria de
+idioma e deixaria de casar. Erro de outra rule (`required`) continua aparecendo. Como o `RUtilsError` some, o `<ul>` leva
+`data-rform-error` enquanto há item `failed`, e o `focusFirstError` procura
+`.RUtilsError, [data-rform-error]` — sem isso o `focusError` passava por cima da
+senha. O `checklistRule` é acrescentado sempre e sai cedo sem lista, então todo `RPassword` com
+`name` entra no `rulesList`.
+
+**`strength`** é `met / total` (`weak` < 50%, `medium` < 100%, `strong`) e não tem
+sentido sem lista — sem ela, `console.warn` e nada renderiza. **`generate`** usa o
+`generatePassword` (`#rform/utils`, puro, `crypto.getRandomValues` + Fisher–Yates, uma
+de cada classe) e confere a senha contra a própria lista, até 20 tentativas: um
+`symbols` que a lista recusa nunca passaria, e o campo avisa em vez de girar. `@generate`
+sozinho liga o botão, como o `@search` liga a busca do `RSelect`.
 
 ### Presets (rules e masks)
 

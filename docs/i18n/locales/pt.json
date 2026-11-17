@@ -243,6 +243,20 @@
             "liEAceito": "Li e aceito os termos",
             "erro": "Essa opção está bloqueada pelo plano atual."
         },
+        "password": {
+            "senha": "Senha",
+            "novaSenha": "Nova senha",
+            "usuario": "Usuário",
+            "oitoCaracteres": "Pelo menos 8 caracteres",
+            "minuscula": "Uma letra minúscula",
+            "maiuscula": "Uma letra maiúscula",
+            "numero": "Um número",
+            "simbolo": "Um símbolo",
+            "semUsuario": "Não contém o usuário",
+            "escutando": "Só com {'@'}generate",
+            "recebeu": "{'@'}generate recebeu: {value}",
+            "erro": "Essa senha já foi usada antes."
+        },
         "presets": {
             "uf": "Use a sigla da UF, em maiúsculas: SP, RJ, BA."
         },

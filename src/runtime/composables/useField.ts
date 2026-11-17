@@ -68,6 +68,8 @@ export type FieldContext<T extends Element, S = T["modelValue"], G = T["modelVal
 type Options<T extends Element, S, G> = {
     set?: (value: T["modelValue"]) => S;
     get?: (value: T["modelValue"]) => G;
+    /** Reescreve o `rule` antes de registrá-lo — o campo acrescenta a própria validação. */
+    rule?: (rule: T["rule"]) => T["rule"];
     /** Reescreve o `default` mesclado — o que o seed e o fallback do model entregam. */
     default?: (value: unknown) => unknown;
 };
@@ -274,10 +276,12 @@ export default function useField<T extends Element, S = T["modelValue"], G = T["
 
     watch(
         () => props.value.rule,
-        (rule) => {
+        (source) => {
             if (!id) {
                 return;
             }
+
+            const rule = opts?.rule ? opts.rule(source) : source;
 
             // A única saída de `resolveRule` sem validador, e por isso a decisão cabe
             // aqui, síncrona: todo o resto ou resolve ou lança.

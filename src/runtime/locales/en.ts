@@ -48,6 +48,17 @@ const en: Messages = {
         hour: {
             hint: "hh:mm",
             separator: "to"
+        },
+        password: {
+            show: "Show password",
+            hide: "Hide password",
+            generate: "Generate password",
+            checklist: "The password does not meet every requirement.",
+            strength: {
+                weak: "Weak",
+                medium: "Medium",
+                strong: "Strong"
+            }
         }
     },
     utils: {

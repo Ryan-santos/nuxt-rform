@@ -2,7 +2,7 @@ import { mountSuspended } from "@nuxt/test-utils/runtime";
 // @vitest-environment nuxt
 import { describe, expect, it } from "vitest";
 
-import { RColor, RDate, RHour, RNumber, RSelect, RText, RTextarea } from "#components";
+import { RColor, RDate, RHour, RNumber, RPassword, RSelect, RText, RTextarea } from "#components";
 
 const fields = import.meta.glob<{ defaults: { ui?: { container?: string } } }>(
     "../../src/runtime/components/fields/*.vue",
@@ -80,6 +80,7 @@ describe("placeholder parado", () => {
     // é o `content`, e ancorar ali tiraria o rótulo flutuante do topo do campo.
     it.each([
         { name: "RSelect", component: RSelect, props: { options: ["a"] }, depth: 1 },
+        { name: "RPassword", component: RPassword, props: {}, depth: 1 },
         { name: "RDate", component: RDate, props: {}, depth: 1 },
         { name: "RHour", component: RHour, props: {}, depth: 1 },
         {

@@ -1,0 +1,24 @@
+<template>
+    <RPassword
+        name="obrigatorio"
+        label="demo.common.obrigatorio"
+        autocomplete="current-password"
+        required
+        rule="required"
+    />
+    <RPassword
+        name="carregando"
+        label="demo.common.carregando"
+        loading
+    />
+    <RPassword
+        name="desabilitado"
+        label="demo.common.desabilitado"
+        disabled
+    />
+    <RPassword
+        name="comErro"
+        label="demo.common.erroManual"
+        error="demo.password.erro"
+    />
+</template>

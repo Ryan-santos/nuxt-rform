@@ -19,7 +19,17 @@
         "tamanho": "Tamanho",
         "corFavorita": "Cor favorita",
         "novidades": "Quero receber novidades",
-        "dias": "Dias"
+        "dias": "Dias",
+        "senha": "Senha",
+        "senhaPlaceholder": "crie uma senha",
+        "requisitos": {
+            "min": "Pelo menos 8 caracteres",
+            "minuscula": "Uma letra minúscula",
+            "maiuscula": "Uma letra maiúscula",
+            "numero": "Um número",
+            "simbolo": "Um símbolo ({'@'}$!%*?&)",
+            "permitidos": "Só letras, números e {'@'}$!%*?&"
+        }
     },
     "empresa": {
         "razaoSocial": "Razão social",

@@ -115,7 +115,11 @@ export default defineNuxtModule<ModuleOptions>({
                     retry: "fa6-solid:rotate-right",
                     cancel: "fa6-solid:ban",
                     "chevron-left": "fa6-solid:chevron-left",
-                    "chevron-right": "fa6-solid:chevron-right"
+                    "chevron-right": "fa6-solid:chevron-right",
+                    eye: "fa6-regular:eye",
+                    "eye-off": "fa6-regular:eye-slash",
+                    key: "fa6-solid:key",
+                    pending: "fa6-regular:clock"
                 })
             }
         }

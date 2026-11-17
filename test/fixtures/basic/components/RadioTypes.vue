@@ -52,13 +52,30 @@
             :options="['a', 'b']"
             @update:model-value="takesBoolean"
         />
+
+        <!-- a lista do RPassword aceita qualquer rule -->
+        <RPassword
+            name="senha"
+            :checklist="[
+                { label: '~~Oito', rule: { name: 'min', min: 8 } },
+                { label: '~~Maiúscula', rule: { name: 'regex', pattern: '[A-Z]' } }
+            ]"
+            :generate="{ length: 20 }"
+            @generate="takesString"
+        />
+
+        <!-- @vue-expect-error — `regex` exige `pattern` -->
+        <RPassword
+            name="semPattern"
+            :checklist="[{ label: '~~X', rule: { name: 'regex' } }]"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
     /**
-     * Guarda de tipo do `RRadio` e do `RCheckbox`, do lugar de quem consome — o
-     * `vue-tsc` da fixture a executa, como a `SelectTypes.vue`.
+     * Guarda de tipo do `RRadio`, do `RCheckbox` e da lista do `RPassword`, do lugar
+     * de quem consome — o `vue-tsc` da fixture a executa, como a `SelectTypes.vue`.
      */
     type Plano = { id: number; nome: string };
 

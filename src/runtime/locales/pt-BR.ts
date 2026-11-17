@@ -49,6 +49,17 @@ export default {
         hour: {
             hint: "hh:mm",
             separator: "até"
+        },
+        password: {
+            show: "Mostrar senha",
+            hide: "Ocultar senha",
+            generate: "Gerar senha",
+            checklist: "A senha não atende a todos os requisitos.",
+            strength: {
+                weak: "Fraca",
+                medium: "Média",
+                strong: "Forte"
+            }
         }
     },
     utils: {

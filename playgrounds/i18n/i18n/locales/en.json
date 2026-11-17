@@ -19,7 +19,17 @@
         "tamanho": "Size",
         "corFavorita": "Favorite color",
         "novidades": "I want to receive news",
-        "dias": "Days"
+        "dias": "Days",
+        "senha": "Password",
+        "senhaPlaceholder": "create a password",
+        "requisitos": {
+            "min": "At least 8 characters",
+            "minuscula": "One lowercase letter",
+            "maiuscula": "One uppercase letter",
+            "numero": "One number",
+            "simbolo": "One symbol ({'@'}$!%*?&)",
+            "permitidos": "Only letters, numbers and {'@'}$!%*?&"
+        }
     },
     "empresa": {
         "razaoSocial": "Legal name",
