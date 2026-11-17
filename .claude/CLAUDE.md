@@ -715,6 +715,18 @@ As format rules (`email`, `url`, `br/*`) saem cedo em `isBlank(value)` para `req
 
 Preset em `useRForm(schema)` passa intacto por `normalizeSchema` (quem resolve é o campo) e vira `z.any().superRefine(async ...)` no `rules` agregado — **schema com preset exige `safeParseAsync`**; schema só-Zod continua síncrono.
 
+#### O preset `schema`: JSON Schema vindo do back (issue #12)
+
+`{ name: "schema", schema, message? }` converte o JSON Schema com `z.fromJSONSchema`. É **preset**, e não uma forma nova de `rule`, porque assim herda de graça a resolução, a tipagem de args do `types/presets.d.ts` e o caminho do `rules` agregado — e mora no chunk dinâmico de `#rform/presets`, onde o zod já está.
+
+- `presets/rules/schema.ts` é o **único** ponto que chama o `fromJSONSchema`, que o zod marca como semi-experimental. Foi por ele que o peer subiu para `^4.2.0`, a primeira versão que o tem.
+- A conversão é cacheada num `WeakMap` pela identidade do objeto. Schema booleano (`true`/`false`, que é JSON Schema válido) não cabe ali e converte toda vez.
+- Vazio sai cedo por `isBlank`, como as rules de formato: sem isso o `fromJSONSchema` reprova `undefined`/`null` com `invalid_type`, e todo campo vazio teria dois donos.
+- Mensagens são as do zod. `message` troca qualquer issue e volta **crua** — é texto final vindo do back, como o `setErrors`, e por isso é `string` e não `TrInput`.
+- O que o zod não converte (`$ref` externo, `if/then/else`, `type` desconhecido) **lança** com `[rform]` e a mensagem dele, dentro do `fn`: o form renderiza, o `validate()` rejeita. É a linha do preset inexistente. `format` desconhecido o zod ignora calado.
+- `test/unit/presetSchema.test.ts` mede o cache com um `vi.mock("zod")` que delega ao real — mora em arquivo próprio porque o mock é do arquivo inteiro. O guarda de tipo é `test/fixtures/basic/components/RuleSchemaTypes.vue`.
+- JSON Schema do **objeto inteiro** (o `required: [...]` no nível do objeto, item 2 da issue) ficou de fora.
+
 ### i18n: `tr`, uma função e dois motores (`src/runtime/translate`, `utils/tr.ts`, `src/runtime/locales`)
 
 Nenhum texto e nenhum formato de data cravado, e **uma** função de tradução só: `tr`. Ela é o que campo, util e rule chamam, e aceita quatro formas de entrada:
