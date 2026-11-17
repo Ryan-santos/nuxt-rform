@@ -73,6 +73,7 @@ export default {
             },
             email: "E-mail inválido.",
             url: "URL inválida.",
+            regex: "Formato inválido.",
             br: {
                 cpf: "CPF inválido.",
                 cnpj: "CNPJ inválido.",

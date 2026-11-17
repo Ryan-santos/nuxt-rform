@@ -226,6 +226,9 @@
             "newsletter": "Newsletter",
             "idioma": "Language"
         },
+        "presets": {
+            "uf": "Use the two-letter state code, in capitals: SP, RJ, BA."
+        },
         "form": {
             "nascimento": "Birth date",
             "aceiteTermos": "I have read and accept the terms",

@@ -226,6 +226,9 @@
             "newsletter": "Newsletter",
             "idioma": "Idioma"
         },
+        "presets": {
+            "uf": "Use a sigla da UF, em maiúsculas: SP, RJ, BA."
+        },
         "form": {
             "nascimento": "Nascimento",
             "aceiteTermos": "Li e aceito os termos",

@@ -10,6 +10,7 @@ import telefone from "../../src/runtime/presets/rules/br/telefone";
 import email from "../../src/runtime/presets/rules/email";
 import max from "../../src/runtime/presets/rules/max";
 import min from "../../src/runtime/presets/rules/min";
+import regex from "../../src/runtime/presets/rules/regex";
 import required from "../../src/runtime/presets/rules/required";
 import url from "../../src/runtime/presets/rules/url";
 
@@ -179,6 +180,50 @@ describe("max", () => {
     it("compara valor em número", () => {
         expect(run(max, 4, { max: 3 })).toBeTypeOf("string");
         expect(run(max, 3, { max: 3 })).toBeUndefined();
+    });
+});
+
+describe("regex", () => {
+    it("aceita o que casa e recusa o que não casa", () => {
+        expect(run(regex, "abc", { pattern: "[a-z]" })).toBeUndefined();
+        expect(run(regex, "ABC", { pattern: "[a-z]" })).toBe("Formato inválido.");
+    });
+
+    it("deixa o vazio para o required", () => {
+        expect(run(regex, "", { pattern: "[a-z]" })).toBeUndefined();
+        expect(run(regex, undefined, { pattern: "[a-z]" })).toBeUndefined();
+        expect(run(regex, null, { pattern: "[a-z]" })).toBeUndefined();
+    });
+
+    it("aplica as flags", () => {
+        expect(run(regex, "ABC", { pattern: "[a-z]", flags: "i" })).toBeUndefined();
+    });
+
+    it("troca a mensagem por message, crua", () => {
+        expect(run(regex, "ABC", { pattern: "[a-z]", message: "Uma minúscula." })).toBe(
+            "Uma minúscula."
+        );
+    });
+
+    it("aceita RegExp", () => {
+        expect(run(regex, "123", { pattern: /^\d+$/ })).toBeUndefined();
+        expect(run(regex, "12a", { pattern: /^\d+$/ })).toBeTypeOf("string");
+    });
+
+    it("lança com padrão inválido", () => {
+        expect(() => run(regex, "a", { pattern: "[" })).toThrow("[rform]");
+    });
+
+    it("RegExp com g não guarda estado entre chamadas", () => {
+        const pattern = /a/g;
+
+        expect(run(regex, "a", { pattern })).toBeUndefined();
+        expect(run(regex, "a", { pattern })).toBeUndefined();
+        expect(pattern.lastIndex).toBe(0);
+    });
+
+    it("testa número como string", () => {
+        expect(run(regex, 42, { pattern: "^\\d+$" })).toBeUndefined();
     });
 });
 

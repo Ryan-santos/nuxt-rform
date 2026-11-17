@@ -70,6 +70,7 @@ const en: Messages = {
             },
             email: "Invalid e-mail.",
             url: "Invalid URL.",
+            regex: "Invalid format.",
             br: {
                 cpf: "Invalid CPF.",
                 cnpj: "Invalid CNPJ.",
