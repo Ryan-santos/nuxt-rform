@@ -2,7 +2,7 @@
     <Transition v-bind="props.ui.transition">
         <Icon
             v-if="props.loading"
-            :name="icon('loading')"
+            :name="props.icons.loading"
             size="1.2rem"
             :class="props.ui.icon"
         />
@@ -14,8 +14,8 @@
      * Indicador de carregamento, ligado enquanto uma validação async está em voo.
      */
     import { useUtil } from "#rform/composables";
-    import type { DeepPartialUI } from "#rform/types";
-    import { defineDefaults, icon } from "#rform/utils";
+    import type { DeepPartialUI, IconsProp } from "#rform/types";
+    import { defineDefaults } from "#rform/utils";
 
     const ui = {
         transition: {
@@ -30,12 +30,12 @@
         icon: "shrink-0 text-(--rf-color-primary) m-3 ml-0"
     };
 
-    export const defaults = defineDefaults({ ui });
+    export const defaults = defineDefaults({ ui, icons: { loading: "loading" } });
 
     export type Props = {
         loading?: boolean;
         ui?: DeepPartialUI<typeof defaults.ui>;
-    };
+    } & IconsProp<typeof defaults.icons>;
 </script>
 
 <script setup lang="ts">

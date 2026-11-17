@@ -88,7 +88,7 @@
                         :class="props.ui?.group?.trigger"
                         @click="open = !open"
                     >
-                        <Icon :name="icon('calendar')" />
+                        <Icon :name="props.icons.calendar" />
                     </button>
 
                     <div
@@ -122,9 +122,9 @@
     import { computed, ref, useTemplateRef, watch } from "vue";
 
     import { useField, useRangeParts } from "#rform/composables";
-    import type { Autocomplete, Element, TextProp } from "#rform/types";
+    import type { Autocomplete, Element, IconsProp, TextProp } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { vMask, icon } from "#rform/utils";
+    import { vMask } from "#rform/utils";
     import { dateFormat, defineDefaults } from "#rform/utils";
 
     import {
@@ -182,6 +182,9 @@
             hint: "hint",
             hintTime: "hintTime",
             separator: "separator"
+        },
+        icons: {
+            calendar: "calendar"
         }
     });
 
@@ -196,6 +199,9 @@
         Utils["Loading"] &
         Utils["Length"] &
         Utils["Placeholder"] &
+        // O `prev`/`next` do `RUtilsCalendar` que ele abre, herdados pelo `useUtil`.
+        Utils["Calendar"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             mode?: M;
             time?: boolean;
@@ -216,6 +222,8 @@
         Utils["Loading"] &
         Utils["Length"] &
         Utils["Placeholder"] &
+        Utils["Calendar"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             mode?: Mode;
             time?: boolean;

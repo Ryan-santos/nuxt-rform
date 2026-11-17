@@ -16,7 +16,7 @@
                 <Row :index="index - 1" />
                 <Icon
                     v-if="canRemove"
-                    :name="icon('remove')"
+                    :name="props.icons.remove"
                     size="1.2rem"
                     :class="props.ui?.list?.item?.remove"
                     @click="model?.splice(index - 1, 1)"
@@ -32,7 +32,7 @@
                     :class="props.ui?.list?.add"
                     @click="model?.push(undefined)"
                 >
-                    <Icon :name="icon('plus')" />
+                    <Icon :name="props.icons.add" />
                     {{ tr(props.text?.button) }}
                 </button>
             </li>
@@ -52,9 +52,9 @@
     import { computed, defineComponent, useSlots } from "vue";
 
     import { useField, useProvide } from "#rform/composables";
-    import type { Element, TextProp } from "#rform/types";
+    import type { Element, IconsProp, TextProp } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, icon } from "#rform/utils";
+    import { defineDefaults } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {
@@ -92,13 +92,18 @@
         default: [],
         text: {
             button: "add"
+        },
+        icons: {
+            add: "plus",
+            remove: "remove"
         }
     });
 
     export type Props = Element<typeof defaults, "array"> &
         Utils["Label"] &
         Utils["Error"] &
-        TextProp<typeof defaults.text> & {
+        TextProp<typeof defaults.text> &
+        IconsProp<typeof defaults.icons> & {
             min?: number;
             max?: number;
         };

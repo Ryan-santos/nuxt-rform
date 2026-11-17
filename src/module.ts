@@ -276,7 +276,7 @@ export default defineNuxtModule<ModuleOptions>({
                     utils
                         .map(
                             ({ name }) =>
-                                `export type ${name} = Omit<Utils["${name}"], "ui"> & { ui?: { Utils?: { ${name}?: Utils["${name}"]["ui"] } } }`
+                                `export type ${name} = Omit<Utils["${name}"], "ui" | "icons"> & { ui?: { Utils?: { ${name}?: Utils["${name}"]["ui"] } }; icons?: { Utils?: { ${name}?: Utils["${name}"] extends { icons?: infer I } ? I : never } } }`
                         )
                         .join("\n   "),
                     "",

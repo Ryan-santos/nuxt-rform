@@ -4,8 +4,8 @@
         :class="props.ui.container"
     >
         <Icon
-            :name="props.ui.icon.name"
-            :class="props.ui.icon.class"
+            :name="props.icons.hint"
+            :class="props.ui.icon"
         />
         {{ props.hint }}
     </span>
@@ -19,24 +19,24 @@
      * @example <RRating name="nota" hint="De 1 a 5" />
      */
     import { useUtil } from "#rform/composables";
-    import type { DeepPartial } from "#rform/types";
-    import { defineDefaults, icon } from "#rform/utils";
+    import type { DeepPartial, IconsProp } from "#rform/types";
+    import { defineDefaults } from "#rform/utils";
 
     export const defaults = defineDefaults({
         hint: "",
         ui: {
             container: "ml-1 flex flex-row items-center gap-1 text-xs text-current/50",
-            icon: {
-                name: icon("alert"),
-                class: "shrink-0"
-            }
+            icon: "shrink-0"
+        },
+        icons: {
+            hint: "alert"
         }
     });
 
     export type Props = {
         hint?: string;
         ui?: DeepPartial<typeof defaults.ui>;
-    };
+    } & IconsProp<typeof defaults.icons>;
 </script>
 
 <script setup lang="ts">

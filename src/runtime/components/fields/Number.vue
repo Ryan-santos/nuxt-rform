@@ -16,7 +16,7 @@
                 :class="props.ui?.group?.controls"
                 @click="decrease"
             >
-                <Icon :name="icon('minus')" />
+                <Icon :name="props.icons.decrement" />
             </button>
 
             <div :class="props.ui?.group?.field?.container">
@@ -39,7 +39,7 @@
                 :class="props.ui?.group?.controls"
                 @click="increase"
             >
-                <Icon :name="icon('plus')" />
+                <Icon :name="props.icons.increment" />
             </button>
 
             <div
@@ -64,9 +64,9 @@
      * @example <RNumber name="quantidade" :step="0.5" :min="0" />
      */
     import { useField } from "#rform/composables";
-    import type { Autocomplete, Element } from "#rform/types";
+    import type { Autocomplete, Element, IconsProp } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, icon, inputValue } from "#rform/utils";
+    import { defineDefaults, inputValue } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {
@@ -103,12 +103,17 @@
                 }
             }
         },
+        icons: {
+            decrement: "minus",
+            increment: "plus"
+        },
         default: 0,
         step: 1
     });
 
     export type Props = Element<typeof defaults, "number", null | number> &
         Autocomplete &
+        IconsProp<typeof defaults.icons> &
         Utils["Description"] &
         Utils["Error"] &
         Utils["Loading"] &

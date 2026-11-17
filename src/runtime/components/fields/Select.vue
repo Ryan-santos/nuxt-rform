@@ -64,11 +64,11 @@
                         :class="props.ui?.group?.clear"
                         @click.stop="clear"
                     >
-                        <Icon :name="icon('remove')" />
+                        <Icon :name="props.icons.clear" />
                     </button>
 
                     <Icon
-                        :name="icon('select')"
+                        :name="props.icons.toggle"
                         :class="props.ui?.group?.icon"
                     />
 
@@ -82,7 +82,7 @@
                     :class="props.ui?.list?.search?.container"
                 >
                     <Icon
-                        :name="icon('search')"
+                        :name="props.icons.search"
                         :class="props.ui?.list?.search?.icon"
                     />
                     <input
@@ -196,7 +196,7 @@
                         v-if="status === 'loading'"
                         :class="props.ui?.list?.state"
                     >
-                        <Icon :name="icon('loading')" />
+                        <Icon :name="props.icons.loading" />
                         {{ tr(props.text?.loading) }}
                     </div>
 
@@ -204,7 +204,7 @@
                         v-else-if="status === 'error' && !hasPage"
                         :class="props.ui?.list?.state"
                     >
-                        <Icon :name="icon('alert')" />
+                        <Icon :name="props.icons.failed" />
                         {{ errorText }}
                         <button
                             type="button"
@@ -238,11 +238,11 @@
                                     :class="props.ui?.list?.footer?.status"
                                 >
                                     <template v-if="footerStatus === 'loadingMore'">
-                                        <Icon :name="icon('loading')" />
+                                        <Icon :name="props.icons.loading" />
                                         {{ tr(props.text?.loadingMore) }}
                                     </template>
                                     <template v-else>
-                                        <Icon :name="icon('alert')" />
+                                        <Icon :name="props.icons.failed" />
                                         {{ errorText }}
                                         <button
                                             type="button"
@@ -319,6 +319,7 @@
     import { useField } from "#rform/composables";
     import type {
         Element,
+        IconsProp,
         LabelOf,
         OptArrayObj,
         OptionItem,
@@ -336,7 +337,6 @@
         dropdownFit,
         fnProp,
         getProperty,
-        icon,
         inputValue,
         keyOf,
         normalizeOptions,
@@ -498,6 +498,13 @@
             retry: "retry",
             clear: "clear",
             count: "count"
+        },
+        icons: {
+            clear: "remove",
+            toggle: "select",
+            search: "search",
+            loading: "loading",
+            failed: "alert"
         }
     });
 
@@ -537,6 +544,7 @@
         Utils["Error"] &
         Utils["Loading"] &
         Utils["Placeholder"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             // `Opts` continua sendo o tipo dos **dados**, nunca o da função: o TS o
             // infere de uma posição de retorno tão bem quanto de um valor, então
@@ -583,6 +591,7 @@
         Utils["Error"] &
         Utils["Loading"] &
         Utils["Placeholder"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             options: Options | OptionsFn;
             resolve?: ResolveFn | false;

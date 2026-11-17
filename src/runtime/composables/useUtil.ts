@@ -4,7 +4,7 @@ import userDefaults from "#rform/defaults";
 import { utils as registry, hooks } from "#rform/registry";
 import type { DeepRequired, WithTextSource } from "#rform/types";
 import type Utils from "#rform/types/components/utils";
-import { hookUi, merger, prefixText } from "#rform/utils";
+import { hookUi, merger, prefixDefaults } from "#rform/utils";
 
 import type { Tr } from "../utils/i18n";
 import type { FieldProps, Injected, ValueProp } from "./useField";
@@ -37,17 +37,20 @@ const build = <P extends Record<string, unknown>>(
     componentName: keyof Utils,
     translate: Pick<UtilContext<P>, "tr" | "locale">
 ): UtilContext<P> => {
-    // Uma vez, fora do computed: o `prefixText` copia, e o objeto `defaults` do
+    // Uma vez, fora do computed: o `prefixDefaults` copia, e o objeto `defaults` do
     // componente é compartilhado por todas as instâncias.
-    const prefixed = prefixText(defaults, componentName, "utils") as P;
+    const prefixed = prefixDefaults(defaults, componentName, "utils") as P;
 
     const props = computed((): UtilProps<P> => {
-        const { ui, ...rest } = upper.props.value;
+        // `ui` e `icons` do pai chegam só pelo galho `Utils.<Nome>`: o resto é do campo.
+        const { ui, icons, ...rest } = upper.props.value;
 
         const utilUi = typeof ui === "object" ? (ui as { Utils?: Utils } | null)?.Utils : undefined;
+        const utilIcons = (icons as { Utils?: Record<string, unknown> } | undefined)?.Utils;
 
         const merged = merger(prefixed, overrides, {
             ...rest,
+            icons: utilIcons?.[componentName] as P["icons"],
             ui: utilUi?.[componentName] as P["ui"]
         });
 

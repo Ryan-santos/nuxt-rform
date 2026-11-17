@@ -45,17 +45,17 @@
 
 <script lang="ts">
     /**
-     * Campo booleano em forma de switch. `icon` troca o indicador por ícone, e aceita
-     * um por estado.
+     * Campo booleano em forma de switch. O indicador mostra um ícone por estado
+     * (`icons`), e `""` deixa aquele estado sem ícone.
      *
-     * @example <RSwitch name="ativo" label="Ativo" icon />
+     * @example <RSwitch name="ativo" label="Ativo" :icons="{ off: 'fa6-solid:xmark' }" />
      */
     import { computed } from "vue";
 
     import { useField } from "#rform/composables";
-    import type { Element } from "#rform/types";
+    import type { Element, IconsProp } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, icon, inputChecked } from "#rform/utils";
+    import { defineDefaults, inputChecked } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {
@@ -87,53 +87,38 @@
                 leaveFromClass: ""
             }
         },
+        // `""` deixa o indicador sem ícone naquele estado.
+        icons: {
+            on: "check",
+            off: "",
+            loading: "loading"
+        },
         default: false
     });
 
-    export type IconConfig = {
-        loading?: string;
-        true?: string;
-        false?: string;
-    };
-
     export type Props = Element<typeof defaults, "switch"> &
+        IconsProp<typeof defaults.icons> &
         Utils["Description"] &
         Utils["Error"] &
-        Utils["Placeholder"] & {
-            icon?: boolean | IconConfig;
-        };
+        Utils["Placeholder"];
 </script>
 
 <script setup lang="ts">
     const _props = withDefaults(defineProps<Props>(), {
         disabled: undefined,
-        icon: undefined,
         required: undefined,
         loading: undefined
     });
 
     const { model, props, tr } = useField(_props);
 
-    const iconDefaults: Required<IconConfig> = {
-        loading: icon("loading"),
-        true: icon("check"),
-        false: ""
-    };
-
     const _icon = computed(() => {
-        const config = props.value.icon;
-
-        if (config === false) {
-            return undefined;
-        }
-
-        const names =
-            config && typeof config === "object" ? { ...iconDefaults, ...config } : iconDefaults;
+        const { icons } = props.value;
 
         if (props.value.loading) {
-            return names.loading;
+            return icons.loading;
         }
 
-        return model.value ? names.true : names.false;
+        return model.value ? icons.on : icons.off;
     });
 </script>

@@ -4,9 +4,9 @@
         :class="props.ui?.container"
     >
         <Icon
-            v-if="props.ui?.icon?.name"
-            :name="props.ui?.icon?.name"
-            :class="props.ui?.icon?.class"
+            v-if="props.icons.alert"
+            :name="props.icons.alert"
+            :class="props.ui?.icon"
         />
         {{ props.error }}
     </p>
@@ -18,25 +18,26 @@
      * resolvida, e o `error` do call site quem traduz é o `useField`.
      */
     import { useUtil } from "#rform/composables";
-    import type { DeepPartialUI, TrInput } from "#rform/types";
-    import { defineDefaults, icon } from "#rform/utils";
+    import type { DeepPartialUI, IconsProp, TrInput } from "#rform/types";
+    import { defineDefaults } from "#rform/utils";
 
     // Sem sentinela `error: ""`, como no Label: `error` é `TrInput`, e num app com
     // i18n `""` não é nenhum dos membros desse tipo.
     export const defaults = defineDefaults({
         ui: {
             container: "text-(--rf-color-danger) ml-1 text-sm font-semibold tracking-wide",
-            icon: {
-                name: icon("alert"),
-                class: "mr-0.5 -mb-0.5 animate-pulse"
-            }
+            icon: "mr-0.5 -mb-0.5 animate-pulse"
+        },
+        // `alert: ""` esconde o ícone.
+        icons: {
+            alert: "alert"
         }
     });
 
     export type Props = {
         error?: TrInput;
         ui?: DeepPartialUI<typeof defaults.ui>;
-    };
+    } & IconsProp<typeof defaults.icons>;
 </script>
 
 <script setup lang="ts">

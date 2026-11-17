@@ -23,7 +23,7 @@
                 <span :class="props.ui?.option?.indicator">
                     <Icon
                         v-if="isChecked(option)"
-                        :name="icon('check')"
+                        :name="props.icons.check"
                         :class="props.ui?.option?.icon"
                     />
                 </span>
@@ -53,7 +53,7 @@
             <span :class="props.ui?.option?.indicator">
                 <Icon
                     v-if="single"
-                    :name="icon('check')"
+                    :name="props.icons.check"
                     :class="props.ui?.option?.icon"
                 />
             </span>
@@ -84,6 +84,7 @@
     import { useField } from "#rform/composables";
     import type {
         Element,
+        IconsProp,
         LabelOf,
         OptionItem,
         OptionKey,
@@ -92,7 +93,7 @@
         ValueOf
     } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import { defineDefaults, icon, inputChecked, keyOf, normalizeOptions } from "#rform/utils";
+    import { defineDefaults, inputChecked, keyOf, normalizeOptions } from "#rform/utils";
 
     export const defaults = defineDefaults({
         ui: {
@@ -114,6 +115,9 @@
                 label: ""
             }
         },
+        icons: {
+            check: "check"
+        },
         default: false,
         pick: { value: "id", label: "name" }
     });
@@ -131,6 +135,7 @@
         Element<typeof defaults, "checkbox">,
         "modelValue" | "onUpdate:modelValue" | "default"
     > &
+        IconsProp<typeof defaults.icons> &
         Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
@@ -151,6 +156,7 @@
         Element<typeof defaults, "checkbox">,
         "modelValue" | "onUpdate:modelValue" | "default"
     > &
+        IconsProp<typeof defaults.icons> &
         Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &

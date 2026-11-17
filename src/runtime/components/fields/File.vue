@@ -30,7 +30,7 @@
                 :accept="accept.list"
             >
                 <Icon
-                    :name="icon('upload')"
+                    :name="props.icons.upload"
                     size="2.5rem"
                     :class="props.ui?.group?.icon"
                 />
@@ -60,7 +60,7 @@
                     :class="props.ui?.group?.loading?.container"
                 >
                     <Icon
-                        :name="icon('loading')"
+                        :name="props.icons.loading"
                         size="2.5rem"
                     />
                     {{ tr(props.text?.loading) }}
@@ -109,16 +109,17 @@
     import { computed, onUnmounted, ref, toRaw } from "vue";
 
     import { useField } from "#rform/composables";
-    import type { Element, FileEntry, TextProp, TrInput, Uploaded, UploadFn } from "#rform/types";
+    import type {
+        Element,
+        FileEntry,
+        IconsProp,
+        TextProp,
+        TrInput,
+        Uploaded,
+        UploadFn
+    } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
-    import {
-        acceptMatch,
-        defineDefaults,
-        fnProp,
-        formatBytes,
-        icon,
-        withParams
-    } from "#rform/utils";
+    import { acceptMatch, defineDefaults, fnProp, formatBytes, withParams } from "#rform/utils";
 
     import { injectPendingList } from "../../composables/pendingList";
     import useUploadQueue from "../../composables/useUploadQueue";
@@ -178,6 +179,10 @@
                 gb: "gb",
                 tb: "tb"
             }
+        },
+        icons: {
+            upload: "upload",
+            loading: "loading"
         }
     });
 
@@ -189,6 +194,9 @@
         Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
+        // Os da linha do `RUtilsFileItem`, herdados pelo `useUtil`.
+        Utils["FileItem"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             /** Extensões e/ou MIME (`"png, jpg"`, `"image/*"`, `".pdf"`). Ausente = tudo. */
             accept?: string;
@@ -219,6 +227,8 @@
         Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
+        Utils["FileItem"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             accept?: string;
             multiple?: boolean;

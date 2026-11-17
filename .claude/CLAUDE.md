@@ -77,7 +77,7 @@ Os `import()` de `.vue` nos templates de tipo saem **relativos**. O `@vue/compil
 
 - Lê o pai (Form) via `inject(key)`. Quando há pai e `props.name` está definido, `model.value` lê/escreve diretamente em `upper.model.value[name]` — é por isso que mutações em arrays no model do filho refletem no Form.
 - **O `merger` só pula `undefined`.** `false`, `0`, `""` e `null` são valor e vencem o que veio antes — `merger({ teste: "single" }, { teste: false })` dá `false`. Já houve uma regra "não apaga" (pular quando o resultado é truthy e o valor novo é falsy), desde o commit inicial e sem motivo registrado: ela tornava impossível um `:search="false"` desligar o que o `defineFieldDefaults` ligou, e espalhou leituras de `_props` cru pelo módulo para contorná-la. A contrapartida é o boolean casting: toda prop booleana de campo entra no `withDefaults` como `undefined`, senão a ausente chegaria `false` e apagaria o padrão do app. `test/nuxt/booleanProps.test.ts` varre a declaração de runtime de todo campo e do `Form` e reprova a booleana sem `default` — foi ele que achou o `loading` e o `time` do `RCalendar`. Comentários que ainda citam a regra "não apaga" (o `debounce`, o `minHeight`, o `focusError`, o `fnProp`) descrevem contornos que hoje funcionam sem ela.
-- Mescla `defaults` + defaults do usuário + `localProps` + `sourceProps` via `merger` — e sobrescreve o `error` depois, que é a única prop com duas procedências (ver "O `error` é `TrInput`", adiante) — depois de passar o `defaults` do componente pelo `prefixText`, que é o que dá procedência de graça ao texto (ver `defaults.text`, na seção de i18n).
+- Mescla `defaults` + defaults do usuário + `localProps` + `sourceProps` via `merger` — e sobrescreve o `error` depois, que é a única prop com duas procedências (ver "O `error` é `TrInput`", adiante) — depois de passar o `defaults` do componente pelo `prefixDefaults`, que é o que dá procedência de graça ao texto (ver `defaults.text`, na seção de i18n).
 - **Os defaults vêm do vite plugin, não do registry.** O `#rform/registry` deixou de ser `nome → () => import(path)` e passou a ser **o conjunto de nomes que o build conhece** — dois `ReadonlySet<string>` mais os `hooks` —, porque era só isso que sobrava dele: a pergunta do guard. Os thunks existiam para a composable buscar o `defaults`, e ninguém mais busca.
 - Por tabela, o registry deixou de carregar caminho, e a prova de precedência mudou de casa: quem mostra que `app/rform/fields/Switch.vue` venceu o embutido é o `components-map.ts`, que importa cada campo estaticamente. `customComponents.test.ts` lê os dois — o nome uma vez só no registry, o caminho no mapa.
 - O motivo histórico dos thunks continua valendo caso alguém os reviva: **não** pode ser `import('../components/${name}.vue')`, porque o Vite compila isso num glob ancorado no arquivo da composable, do qual `app/rform/fields` não faz parte; e sendo thunk, o ciclo `Text.vue → useField → registry → Text.vue` não fecha em tempo de carga.
@@ -462,7 +462,7 @@ folha da esquerda para a direita reiniciando em `null`.
 **A entrada e a leitura têm tipos diferentes**, como o `error`: o `Props` declara
 `DeepPartialUI` (com o array), e o que o componente lê sai do merge já em string —
 `ResolvedUI` no `FieldProps`, `DeepRequired` no `useUtil`. Sem essa volta, toda folha
-que não é `class` (os nomes do `<Transition>`, o `ui.icon.name` do `RUtilsError`)
+que não é `class` (os nomes do `<Transition>`)
 deixa de compilar. O `null` também some na leitura, e é a mesma mentira de antes:
 `:class` o aceita, e quem zera uma folha que não é classe pediu por isso.
 
@@ -532,15 +532,15 @@ Fica literal de propósito: `*-current/*` (já é `currentColor`), `bg-transpare
 
 `src/runtime/style.css` mora em `src/runtime/` porque o `@nuxt/module-builder` só constrói `src/module` e `src/runtime/` — um `.css` na raiz de `src/` nunca chega ao `dist`. O mkdist passa cssnano nele, então o arquivo publicado sai minificado (`@layer` sobrevive).
 
-### Os ícones vivem num namespace (`icon()` + `prefixIcons`)
+### Os ícones vivem num namespace (`prefixDefaults` + `prefixIcons`)
 
-Os 16 aliases que o módulo registra no `@nuxt/icon` são **prefixados**, e as duas
+Os 20 aliases que o módulo registra no `@nuxt/icon` são **prefixados**, e as duas
 metades do prefixo não se conhecem:
 
-| lado    | quem escreve                                              | o que sai                        |
-| ------- | --------------------------------------------------------- | -------------------------------- |
-| build   | `prefixIcons` (`module.ts`), sobre o `moduleDependencies` | `"rform:plus": "fa6-solid:plus"` |
-| runtime | `icon()` (`utils/icon.ts`), exportado por `#rform/utils`  | `icon("plus")` → `"rform:plus"`  |
+| lado    | quem escreve                                                           | o que sai                          |
+| ------- | ---------------------------------------------------------------------- | ---------------------------------- |
+| build   | `prefixIcons` (`module.ts`), sobre o `moduleDependencies`              | `"rform:plus": "fa6-solid:plus"`   |
+| runtime | `prefixDefaults` (`utils/prefixDefaults.ts`), sobre o `defaults.icons` | `{ add: "plus" }` → `"rform:plus"` |
 
 **Isso já foi um espaço global.** Os aliases eram os nomes curtos (`plus`,
 `calendar`, `loading`…) e o template escrevia `<Icon name="plus" />`. Custava duas
@@ -563,27 +563,112 @@ export default defineNuxtConfig({
 });
 ```
 
-**Um alias sozinho não derruba os outros 15**, e é o `defu` que garante: os
+**Um alias sozinho não derruba os outros 19**, e é o `defu` que garante: os
 `defaults` de um `moduleDependencies` chegam ao app por
 `nuxt.options[configKey] = defu(...overrides, nuxt.options[configKey], ...defaults)`
 (no `installModules` do `@nuxt/kit`), que mescla **fundo**, chave a chave. O valor
 do app ganha só na chave que ele escreveu.
 
-Não há prop de ícone a inventar por causa disso: o endereço de um ícone é o alias,
-como o endereço de uma cor é a variável `--rf-*`. Dois campos abrem uma segunda
-porta, e as duas são **por instância**, não globais — o `icon` do `RSwitch`
-(`{ true, false, loading }`, nomes crus do iconify) e o `ui.icon.name` do
-`RUtilsError`, que é `ui` como qualquer outro.
+O alias é o endereço **do app inteiro**, como a variável `--rf-*` é o de uma cor. Para
+um componente ou uma tag, a porta é a prop `icons`, adiante.
 
-#### O `icon()` é o que dá o conjunto a um campo do usuário
+#### A prop `icons`
 
-Ele mora em `#rform/utils` justamente para um `.vue` de `app/rform/fields` chamar
-`icon("alert")` e receber o mesmo ícone que o `RUtilsError` usa — **acompanhando o
-override que o app tenha feito**, o que escrever `"fa6-regular:file-lines"` na mão
-não faz. Mesma ideia do `tr` e do `vMask`: o campo do usuário é de primeira classe,
-então alcança o que o embutido alcança.
+Todo campo e todo util que desenha ícone declara `defaults.icons` — **papel → nome
+curto** (`add: "plus"`) — e intersecciona `IconsProp<typeof defaults.icons>` no
+`Props`. O template lê `props.icons.<papel>`, nunca um nome escrito no `<Icon>`.
 
-O prefixo fica **escrito duas vezes**, e não há como não ficar: `utils/icon.ts` é
+| componente       | papéis                                                         |
+| ---------------- | -------------------------------------------------------------- |
+| `RNumber`        | `decrement`, `increment`                                       |
+| `RArray`         | `add`, `remove`                                                |
+| `RCheckbox`      | `check`                                                        |
+| `RDate`          | `calendar`                                                     |
+| `RSelect`        | `clear`, `toggle`, `search`, `loading`, `failed`               |
+| `RFile`          | `upload`, `loading`                                            |
+| `RSwitch`        | `on`, `off`, `loading`                                         |
+| `RPassword`      | `generate`, `show`, `hide`, `idle`, `pending`, `met`, `failed` |
+| `RUtilsLoading`  | `loading`                                                      |
+| `RUtilsError`    | `alert`                                                        |
+| `RUtilsCalendar` | `prev`, `next`                                                 |
+| `RUtilsFileItem` | `file`, `failed`, `retry`, `cancel`, `remove`                  |
+
+**A chave é o papel, não o glifo**: o `RSelect` desenha `rform:remove` no X, e a
+chave é `clear`. É o que deixa o app trocar o X sem trocar todo `remove` do campo.
+
+As três camadas são as de sempre, e o `merger` só pula `undefined`: `defaults.icons`
+do componente → `defineFieldDefaults({ Number: { icons } })` (ou `Utils: { Error: {
+icons } }`, ou o galho `icons.Utils` de um campo) → `:icons` na tag. `""` é valor, e onde o template tem `v-if` (o
+`alert` do `RUtilsError`, os três do `RSwitch`) ele esconde o ícone.
+
+**Isso já foi duas portas soltas**: o `icon: boolean | { true, false, loading }` do
+`RSwitch` e o `ui.icon.name` do `RUtilsError`. O primeiro saiu inteiro e virou
+`icons: { on, off, loading }` — desligar o indicador é `""` nos três, sem um
+booleano ao lado dizendo a mesma coisa; o segundo virou `icons.alert`, e o `ui.icon`
+passou a ser a string de classe que antes era `ui.icon.class`.
+
+##### O util lê o galho `Utils`, como o `ui`
+
+Num campo, o `icons` tem os papéis **dele** e um galho `Utils` com os dos utils que
+renderiza — a mesma forma do `ui`:
+
+```vue
+<RText :icons="{ Utils: { Error: { alert: lucide:circle-alert } } }" />
+<RSelect :icons="{ loading: lucide:loader, Utils: { Loading: { loading: lucide:spin } } }" />
+```
+
+O `useUtil` tira `ui` e `icons` do `upper.props` e lê só `icons.Utils[<Nome>]`. O
+resto do `icons` do campo **não desce**, e é o que resolve sem mecanismo nenhum a
+colisão de papel: o `loading` do `RSelect` (o rodapé) e o do `RUtilsLoading` são
+endereços diferentes, e o `defaults.icons` do campo nunca declara `Utils`, então
+não há default de campo que apague o `Utils.Loading.icons` do app.
+
+**Isso já foi plano**, com `<RText :icons="{ alert }">` chegando ao `RUtilsError` e um
+`upper.icons` à parte, provido pelo `useField` sem o `defaults.icons` do campo — o
+remendo que a forma plana exigia para o padrão do `RSelect` não vencer o do app.
+Um `alert` plano num campo hoje não chega a lugar nenhum (e não compila).
+
+A precedência é a do `ui`: default do util < `Utils.<Nome>` do app < `icons.Utils`
+do campo no `defineFieldDefaults` < tag.
+
+O tipo sai do template `types/components/utils/props`: cada `Utils["<Nome>"]` troca o
+`icons` do util por `{ Utils?: { <Nome>?: … } }`, como já trocava o `ui`. O miolo é
+um condicional (`Utils["X"] extends { icons?: infer I } ? I : never`), e o
+compiler-sfc aguenta porque a chave `icons` existe sempre — ele só precisa saber que
+é `Object`. Util sem ícone fica com `<Nome>?: never`.
+Na leitura o `icons` do campo é **completo** e sem `Utils` (`FieldProps` troca o
+`IconTree` parcial por `{ [K]-?: string }` e exclui a chave), porque o
+`defaults.icons` semeia todo papel — a mesma volta do `ResolvedUI`.
+
+Guarda: `test/nuxt/iconsProp.test.ts` (tag, o galho `Utils`, o papel do campo não
+descendo, o plano não chegando, `""`, o `RSwitch`) e
+`test/nuxt/iconsDefaults.test.ts` (as camadas, inclusive `icons.Utils` de um campo
+vencendo o `Utils.<Nome>` do app).
+
+#### O nome curto é prefixado como o `text`
+
+O `prefixDefaults` que já dá procedência ao `defaults.text` prefixa também as folhas
+do `defaults.icons` com `ICON_PREFIX` (`"rform:"`), no mesmo ponto — **antes** do
+`merger`, só sobre o `defaults` do próprio componente. O que o app escreve na tag,
+no `defineFieldDefaults` ou no galho `Utils` chega cru, e é nome do iconify.
+
+Duas folhas passam intactas: `""`, que é o "sem ícone", e **nome com `:`**. O `:` é
+o marcador porque todo nome do iconify o tem e nenhum alias curto tem — então um
+campo do usuário escreve `icons: { star: "lucide:star" }` no próprio `defaults` sem
+virar `rform:lucide:star`, e `"rform:alert"` por extenso também funciona. O formato
+`i-lucide-star` (sem `:`) seria prefixado: no `defaults`, escreva com `:`.
+
+É o que dá o conjunto a um campo do usuário: `icons: { hint: "alert" }` recebe o
+mesmo ícone que o `RUtilsError` usa, **acompanhando o override que o app tenha
+feito**. Num template sem prop `icons`, o mesmo é `<Icon name="rform:alert" />` — o
+alias por extenso.
+
+**Isso já foi uma função**, o `icon("plus")` de `#rform/utils`, chamada em todo
+`defaults.icons`. Era a mesma regra do `text` escrita de outro jeito: lá a chave
+curta é prefixada pelo `useField`/`useUtil`, aqui cada componente importava um
+helper para fazer à mão. Saiu, e com ela um export público. Junto, o `prefixDefaults` deixou de se chamar `prefixText`: já não prefixa só texto.
+
+O prefixo fica **escrito duas vezes**, e não há como não ficar: o `ICON_PREFIX` é
 runtime e não pode importar o `const name` do `module.ts`, porque só
 `src/runtime/` chega ao `dist` (ver "Só `src/runtime/` chega ao `dist`"). Quem liga
 os dois é o teste.
@@ -593,10 +678,10 @@ os dois é o teste.
 `useResolvedName` do `@nuxt/icon` faz `options.aliases?.[bare] || bare` e **só
 depois** procura o `:` para partir em coleção. Então:
 
-- **nome fora do registro** — `icon("plux")`, ou o alias removido — cai no ramo do
+- **nome fora do registro** — `add: "plux"` no `defaults.icons`, ou o alias removido — cai no ramo do
   `:` como coleção `rform`, vira uma consulta de `plux` numa coleção que não existe,
   e renderiza **nada**, com um `[Icon] failed to load icon` no console;
-- **nome cru que sobrou** — um `name="loading"` que não passou pelo `icon()` — não
+- **nome cru que sobrou** — um `name="loading"` escrito no `<Icon>`, sem prefixo — não
   tem `:` nenhum, não casa com coleção nenhuma, e renderiza nada do mesmo jeito.
 
 O segundo é o que de fato aconteceu ao prefixar: `RUtilsLoading`, `RUtilsError`,
@@ -604,13 +689,13 @@ O segundo é o que de fato aconteceu ao prefixar: `RUtilsLoading`, `RUtilsError`
 **perderam o ícone** — quatro pontos, dois deles (o spinner e o ícone de erro) em
 todo campo do módulo. Nenhum teste viu, e a lint não tem como ver.
 
-**`test/unit/icons.test.ts` é a guarda**, três casos: (a) o conjunto de nomes que
-os componentes pedem ao `icon()` é **igual** ao declarado no `prefixIcons`, nos dois
+**`test/unit/icons.test.ts` é a guarda**, três casos: (a) o conjunto de nomes curtos
+nos `defaults.icons` dos componentes é **igual** ao declarado no `prefixIcons`, nos dois
 sentidos — com uma lista de `orphans` para o que é oferecido ao app sem o módulo
 usar (hoje só `image`), e uma terceira asserção que manda tirar da lista o alias que
 passar a ser usado; (b) nenhum `<Icon name="…">` estático sem `:` sobrou num
-componente; (c) o prefixo do `icon()` e o `const name` do `module.ts` são a mesma
-string.
+componente; (c) o `ICON_PREFIX` do `prefixDefaults` e o `const name` do `module.ts` são a
+mesma string. E `test/unit/prefixDefaults.test.ts` cobre a regra do `:` e do `""`.
 
 ### RArray: um render effect por linha
 
@@ -896,9 +981,9 @@ export const defaults = defineDefaults({
 });
 ```
 
-`Base` reserva `ui`, `default`, `text` e as duas que moram fora dele por contrato — `label` e `placeholder`, adiante. `text` é `TextSource` (`src/runtime/type.d.ts`): um objeto aninhado, `{ [key]: string | TextSource }`, e continua aninhado o caminho inteiro — nada é achatado para o topo. Um template lê `tr(props.text?.button)`, nunca uma prop de nível superior tipo `buttonText`. Sem esse marcador a regra "prefixa toda string do `defaults`" transformaria `Select.pick.value: "id"` em `"rform.fields.select.id"`, e o Select passaria a procurar `option["rform.fields.select.id"]` — quebra calada em dois lugares hoje (`Select.pick`, `Pin.type`) e armadilha permanente para campo de usuário. Note que o `label` **aninhado** dentro do `pick` também escapa: o `prefixText` só prefixa `text` e as duas chaves de topo `label`/`placeholder`, e `pick.label` não é chave de topo.
+`Base` reserva `ui`, `default`, `text` e as duas que moram fora dele por contrato — `label` e `placeholder`, adiante. `text` é `TextSource` (`src/runtime/type.d.ts`): um objeto aninhado, `{ [key]: string | TextSource }`, e continua aninhado o caminho inteiro — nada é achatado para o topo. Um template lê `tr(props.text?.button)`, nunca uma prop de nível superior tipo `buttonText`. Sem esse marcador a regra "prefixa toda string do `defaults`" transformaria `Select.pick.value: "id"` em `"rform.fields.select.id"`, e o Select passaria a procurar `option["rform.fields.select.id"]` — quebra calada em dois lugares hoje (`Select.pick`, `Pin.type`) e armadilha permanente para campo de usuário. Note que o `label` **aninhado** dentro do `pick` também escapa: o `prefixDefaults` só prefixa `text` e as duas chaves de topo `label`/`placeholder`, e `pick.label` não é chave de topo.
 
-Quem prefixa é `prefixText` (`utils/prefixText.ts`, puro), chamado por `useField` (com `scope: "fields"`) e por `useUtil` (com `scope: "utils"`) sobre o `defaults` do componente, **antes** do `merger`:
+Quem prefixa é `prefixDefaults` (`utils/prefixDefaults.ts`, puro), chamado por `useField` (com `scope: "fields"`) e por `useUtil` (com `scope: "utils"`) sobre o `defaults` do componente, **antes** do `merger`:
 
 ```
 defaults.text = { button: "add", bytes: { kb: "kb" } }
@@ -920,9 +1005,9 @@ defineFieldDefaults({ Array: { text: { button: "meu.add" } } })    → "meu.add"
 // nada passado                                                    → "rform.fields.array.add" (prefixado)
 ```
 
-**`label` e `placeholder` são as duas exceções — sempre fora de `text`, no topo**, por contrato: um app os passa direto (`<RText label="Nome" />`), então não podem morar dentro de uma árvore que o app não escreve por inteiro. Continuam sendo `TrInput`, e `prefixText` prefixa os dois quando o valor veio dos defaults do próprio componente e não é uma string vazia — é o `placeholder: "placeholder"` do `File`, que sai como `rform.fields.file.placeholder`. A string vazia é deixada em paz: é o sentinela de "não renderiza nada", e `rform.fields.file.` sozinho nunca é uma chave a resolver por engano.
+**`label` e `placeholder` são as duas exceções — sempre fora de `text`, no topo**, por contrato: um app os passa direto (`<RText label="Nome" />`), então não podem morar dentro de uma árvore que o app não escreve por inteiro. Continuam sendo `TrInput`, e `prefixDefaults` prefixa os dois quando o valor veio dos defaults do próprio componente e não é uma string vazia — é o `placeholder: "placeholder"` do `File`, que sai como `rform.fields.file.placeholder`. A string vazia é deixada em paz: é o sentinela de "não renderiza nada", e `rform.fields.file.` sozinho nunca é uma chave a resolver por engano.
 
-No `useUtil` o `prefixText` roda **uma vez, fora do `computed`**: ele copia, e o objeto `defaults` do componente é compartilhado por todas as instâncias.
+No `useUtil` o `prefixDefaults` roda **uma vez, fora do `computed`**: ele copia, e o objeto `defaults` do componente é compartilhado por todas as instâncias.
 
 **Isso já foi achatamento, e a colisão que ele arriscava já foi resolvida por guarda em vez de por forma.** `defaults.text` costumava virar props de nível superior — `text: { buttonText: "add" }` produzia `props.buttonText` — e `defineDefaults` recusava em tempo de tipo qualquer chave de `text` que colidisse com uma chave do topo (`NoTextCollision`), porque o achatamento a sobrescreveria calado. A armadilha real, e ela mordeu de verdade: `utils/Calendar.vue` chegou a declarar `timeLabel` em vez de `time`, porque `time` já era o booleano que decide se o relógio aparece, e uma chave achatada ali seria _truthy_ para sempre — o painel de hora abriria e nunca mais fecharia. Com `text` aninhado, `props.text.time` e `props.time` são caminhos diferentes e não podem colidir; a chave voltou a ser `time`, e o guard `NoTextCollision` não existe mais — nada precisa recusar o que não pode acontecer. A lição que fica, mesmo sem o mecanismo que a forçava: não dar a uma chave de `text` o nome de uma prop que o componente testa por veracidade.
 
@@ -950,7 +1035,7 @@ O que o compiler-sfc aceita aqui e recusa na forma ingênua é que **a chave `te
 
 #### `WithTextSource<P>`: o mesmo componente, visto do lado errado
 
-O `defaults` que o plugin injeta no `useUtil<Props>()` não pode ser tipado como `Props`: em `Props`, `text` é `TextTree<...>` — folhas `TrInput` — mas o objeto que o componente de fato declara em `defaults.text` ainda não passou por `prefixText`, e suas folhas são só o **sufixo** cru (`"start"`, não um `TrInput` resolvido). Num app com `@nuxtjs/i18n`, `TrInput` estreita para `ModuleKey | Literal` — nenhum sufixo solto como `"start"` é `ModuleKey` nem começa com `~~` — então os dois tipos genuinamente divergem, e não é um detalhe de nomenclatura.
+O `defaults` que o plugin injeta no `useUtil<Props>()` não pode ser tipado como `Props`: em `Props`, `text` é `TextTree<...>` — folhas `TrInput` — mas o objeto que o componente de fato declara em `defaults.text` ainda não passou por `prefixDefaults`, e suas folhas são só o **sufixo** cru (`"start"`, não um `TrInput` resolvido). Num app com `@nuxtjs/i18n`, `TrInput` estreita para `ModuleKey | Literal` — nenhum sufixo solto como `"start"` é `ModuleKey` nem começa com `~~` — então os dois tipos genuinamente divergem, e não é um detalhe de nomenclatura.
 
 `WithTextSource<P>` (`src/runtime/type.d.ts`) existe para isso: `Omit<P, "text"> & { text?: TextSource }` — o mesmo `Props`, com `text` trocado de volta para a forma de autoria. `useUtil` aceita `WithTextSource<P>` e não `P` na sobrecarga síncrona precisamente porque `defaults` está do lado de cá do prefixo; quem chama `useUtil<Props>()` sem argumento (a forma assíncrona, que busca os defaults pelo registry) não precisa dele — ali quem já prefixou é o próprio `useUtil`, por dentro.
 
@@ -989,14 +1074,14 @@ Por tabela, nada disso existe: `resolveRule` não tem parâmetro de tradutor, `B
 
 ```
 rform.
-  fields.                      ← components/fields, via prefixText(scope: "fields")
+  fields.                      ← components/fields, via prefixDefaults(scope: "fields")
     array.add
     file.bytes.kb              ← grupo: a própria chave ("bytes") entra no caminho
     file.tooBig                ← com param: tr({ key, params: { max } }), montado no campo
     file.tooMany               ← plural pelo primeiro param numérico, via pluralOf
     date.hint
     date.hintTime
-  utils.                       ← components/utils, via prefixText(scope: "utils")
+  utils.                       ← components/utils, via prefixDefaults(scope: "utils")
     calendar.time
   presets.
     rules.min.number           ← preset, via trRule({ key: "min.number" })
@@ -1005,7 +1090,7 @@ rform.
     date                        ← compartilhado; escrito por extenso: tr("rform.formats.date")
 ```
 
-O topo tem exatamente as quatro raízes que o mecanismo de prefixo consegue produzir: `fields.*` e `utils.*` são o `scope` que `useField`/`useUtil` passam para `prefixText`; `presets.*` e `formats.*` são espaços compartilhados que nada prefixa, escritos por extenso nos call sites (`trRule`, `tr("rform.formats.date")`). Quem guarda essa forma é `test/unit/i18n.test.ts` — `keeps the top level to the four namespaces the prefix can produce` — que também asserta que os dois packs concordam em toda chave, para nenhum locale cair no fallback calado.
+O topo tem exatamente as quatro raízes que o mecanismo de prefixo consegue produzir: `fields.*` e `utils.*` são o `scope` que `useField`/`useUtil` passam para `prefixDefaults`; `presets.*` e `formats.*` são espaços compartilhados que nada prefixa, escritos por extenso nos call sites (`trRule`, `tr("rform.formats.date")`). Quem guarda essa forma é `test/unit/i18n.test.ts` — `keeps the top level to the four namespaces the prefix can produce` — que também asserta que os dois packs concordam em toda chave, para nenhum locale cair no fallback calado.
 
 `fields.*`/`utils.*` é o que dissolve a antiga preocupação de um campo e um util de mesmo nome disputarem chave: `Calendar` é os dois hoje, e cada um tem a própria raiz — `rform.fields.calendar.*` contra `rform.utils.calendar.*`. Isso já foi um espaço plano só, com os dois lados no mesmo nível e um teste dedicado só para provar que não colidiam; a separação por `scope` torna a colisão impossível em vez de meramente ausente.
 
@@ -1203,7 +1288,7 @@ template literal existia para cobrir.
 
 ### `#rform/utils` é o barrel público
 
-O template de `utils.ts` emite `import X from "<path>"` (default, virando `export { X }`) **e** `export * from "<path>"` para cada arquivo de `src/runtime/utils`. É o `export *` que faz `import { defineRule } from "#rform/utils"` funcionar. De lá saem também `tr` e `trRule`, `defineLocale` e `prefixText`.
+O template de `utils.ts` emite `import X from "<path>"` (default, virando `export { X }`) **e** `export * from "<path>"` para cada arquivo de `src/runtime/utils`. É o `export *` que faz `import { defineRule } from "#rform/utils"` funcionar. De lá saem também `tr` e `trRule`, `defineLocale` e `prefixDefaults`.
 
 #### Só quem tem `export default` é nomeado
 
@@ -1765,7 +1850,7 @@ O `merger` recursiona em objeto que não é array, então `:pick="{ value: 'codi
 conserva o `label: "name"` do default. A semântica de "sobrescrevo uma das duas"
 sai de graça.
 
-**O `prefixText` não alcança o `label` de dentro**, e isso é o que o teste passou a
+**O `prefixDefaults` não alcança o `label` de dentro**, e isso é o que o teste passou a
 provar: ele só prefixa `defaults.text` e as duas chaves de **topo**
 `label`/`placeholder`, e `pick.label` não é chave de topo.
 
@@ -2347,6 +2432,18 @@ O par nome→classe é **gerado**, em `#rform/registry` (`hooks.fields` / `hooks
 ### Um app consumidor precisa do próprio `tsconfig.json`
 
 `ts.findConfigFile` sobe a partir do arquivo. Um app Nuxt sem tsconfig na raiz acaba achando o tsconfig de um projeto acima — e o `@vue/compiler-sfc` resolve `#rform/types/...` contra os tipos gerados **daquele** projeto. O sintoma é mudo e específico: as props que um util contribui simplesmente não são declaradas, e `<RRating hint="…">` cai como atributo de fallthrough em vez de prop, sem erro de compilação. Foi por isso que `test/fixtures/basic/tsconfig.json` teve que existir.
+
+### O cache de módulos do vitest não vê o `Props` de outro arquivo
+
+O vitest 5 guarda o módulo transformado em `node_modules/.vitest-cache/`, chaveado
+pelo conteúdo **do próprio arquivo**. Só que a declaração de runtime das props de um
+campo depende do `Props` dos utils que ele intersecciona (`Utils["Error"]`), e mudar o
+`Error.vue` não muda o `Text.vue`: o teste segue montando o `RText` compilado
+antes, sem a prop nova, e ela cai em `attrs`, calado.
+
+Medido ao criar o `icons`: o `compileScript` direto declarava a prop, o vitest não, e
+nem um `zzz?: string` provisório no `Error.vue` aparecia. `rm -rf
+node_modules/.vitest-cache` resolve. Vale para toda prop que um util dá aos campos.
 
 ### vue-tsc precisa de `.nuxt`
 

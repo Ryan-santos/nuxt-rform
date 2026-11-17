@@ -19,7 +19,14 @@ import { masks } from "#rform/masks";
 import { components as registry, hooks } from "#rform/registry";
 import type { Element, ResolvedUI } from "#rform/types";
 import type Components from "#rform/types/components";
-import { hookUi, merger, prefixText, resolveMask, resolveRule, type MaskRef } from "#rform/utils";
+import {
+    hookUi,
+    merger,
+    prefixDefaults,
+    resolveMask,
+    resolveRule,
+    type MaskRef
+} from "#rform/utils";
 
 import type { Tr } from "../utils/i18n";
 import { injectErrorsBag } from "./errorsBag";
@@ -41,9 +48,14 @@ export const key = Symbol() as InjectionKey<Value>;
  * é `TrInput`, e quem o traduz é este arquivo — e o `ui` com cada `UIClass` já
  * virada string.
  */
-export type FieldProps<T extends object = object> = Omit<Element & T, "error" | "ui"> & {
+export type FieldProps<T extends object = object> = Omit<Element & T, "error" | "ui" | "icons"> & {
     error?: string;
     ui?: T extends { ui?: infer U } ? ResolvedUI<U> : Element["ui"];
+    // Completo na leitura: o `defaults.icons` do componente semeia toda chave. O
+    // `Utils` é dos utils, que o leem pelo `upper`; o campo não.
+    icons: T extends { icons?: infer I }
+        ? { [K in Exclude<keyof NonNullable<I>, "Utils">]-?: string }
+        : {};
 };
 
 export type ValueProp<T extends object = object> = {
@@ -112,7 +124,7 @@ export default function useField<T extends Element, S = T["modelValue"], G = T["
     // Prefixado **antes** do merger: é o que dá procedência de graça ao texto. Já
     // pronto aqui, e não num ref preenchido depois, então o `props` nasce completo e
     // o watcher de seed enxerga o `default` de verdade na primeira passada.
-    const defaults = prefixText(injected.defaults ?? {}, injected.name, "fields") as Element;
+    const defaults = prefixDefaults(injected.defaults ?? {}, injected.name, "fields") as Element;
 
     const overrides = userDefaults[injected.name];
 
@@ -127,7 +139,13 @@ export default function useField<T extends Element, S = T["modelValue"], G = T["
     const hook = (hooks.fields as Record<string, string | undefined>)[injected.name];
 
     const props = computed(() => {
-        const merged = merger(defaults, overrides, localProps.value, sourceProps) as FieldProps<T>;
+        // Por `unknown`: o `icons` da leitura é completo, e o merger não sabe disso.
+        const merged = merger(
+            defaults,
+            overrides,
+            localProps.value,
+            sourceProps
+        ) as unknown as FieldProps<T>;
 
         // A tradução acontece aqui, na fronteira do call site: um segundo `tr` sobre a
         // mensagem do bag a levaria ao `t` do app e cairia no aviso de *missing key*.

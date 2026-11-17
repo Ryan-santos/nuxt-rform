@@ -8,7 +8,7 @@
         />
         <Icon
             v-else
-            :name="icon(broken ? 'alert' : 'file')"
+            :name="broken ? props.icons.failed : props.icons.file"
             :class="[props.ui.icon, broken ? props.ui.failed : '']"
         />
 
@@ -62,7 +62,7 @@
                 :class="props.ui.action"
                 @click="emit('retry')"
             >
-                <Icon :name="icon('retry')" />
+                <Icon :name="props.icons.retry" />
             </button>
 
             <button
@@ -73,7 +73,7 @@
                 :class="props.ui.action"
                 @click="emit('cancel')"
             >
-                <Icon :name="icon('cancel')" />
+                <Icon :name="props.icons.cancel" />
             </button>
             <button
                 v-else
@@ -83,7 +83,7 @@
                 :class="props.ui.remove"
                 @click="emit('remove')"
             >
-                <Icon :name="icon('remove')" />
+                <Icon :name="props.icons.remove" />
             </button>
         </div>
     </div>
@@ -102,8 +102,8 @@
     import { computed, onUnmounted, ref, watch } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartialUI, FileEntry, TextTree } from "#rform/types";
-    import { defineDefaults, formatBytes, icon } from "#rform/utils";
+    import type { DeepPartialUI, FileEntry, IconsProp, TextTree } from "#rform/types";
+    import { defineDefaults, formatBytes } from "#rform/utils";
 
     const ui = {
         container: `
@@ -135,7 +135,16 @@
         `
     };
 
-    export const defaults = defineDefaults({ ui });
+    export const defaults = defineDefaults({
+        ui,
+        icons: {
+            file: "file",
+            failed: "alert",
+            retry: "retry",
+            cancel: "cancel",
+            remove: "remove"
+        }
+    });
 
     /**
      * As folhas de texto que a linha lê, declaradas aqui em vez de importadas do
@@ -156,7 +165,7 @@
         text?: TextTree<Text>;
         /** Herdado do campo pelo merge de props do `useUtil`. */
         disabled?: boolean;
-    };
+    } & IconsProp<typeof defaults.icons>;
 </script>
 
 <script setup lang="ts">

@@ -35,7 +35,7 @@
                 data-action="generate"
                 @click="generate"
             >
-                <Icon :name="icon('key')" />
+                <Icon :name="props.icons.generate" />
             </button>
 
             <button
@@ -48,7 +48,7 @@
                 data-action="toggle"
                 @click="visible = !visible"
             >
-                <Icon :name="icon(visible ? 'eye-off' : 'eye')" />
+                <Icon :name="visible ? props.icons.hide : props.icons.show" />
             </button>
 
             <div
@@ -118,13 +118,12 @@
     import { computed, ref, shallowRef, watch } from "vue";
 
     import { useField } from "#rform/composables";
-    import type { Autocomplete, Element, TextProp, TrInput } from "#rform/types";
+    import type { Autocomplete, Element, IconsProp, TextProp, TrInput } from "#rform/types";
     import type Utils from "#rform/types/components/utils/props";
     import type { Rule } from "#rform/types/presets";
     import {
         defineDefaults,
         generatePassword,
-        icon,
         inputValue,
         resolveRule,
         type GenerateOptions
@@ -196,6 +195,16 @@
                 medium: "medium",
                 strong: "strong"
             }
+        },
+        // Os quatro últimos são um por `ChecklistState`.
+        icons: {
+            generate: "key",
+            show: "eye",
+            hide: "eye-off",
+            idle: "pending",
+            pending: "pending",
+            met: "check",
+            failed: "remove"
         }
     });
 
@@ -216,6 +225,7 @@
         Utils["Loading"] &
         Utils["Length"] &
         Utils["Placeholder"] &
+        IconsProp<typeof defaults.icons> &
         TextProp<typeof defaults.text> & {
             /** Os requisitos, marcados enquanto se digita e conferidos no submit. */
             checklist?: ChecklistItem[];
@@ -349,14 +359,7 @@
         return attempted.value ? "failed" : "pending";
     };
 
-    const STATE_ICONS: Record<ChecklistState, string> = {
-        idle: icon("pending"),
-        pending: icon("pending"),
-        met: icon("check"),
-        failed: icon("remove")
-    };
-
-    const stateIcon = (index: number) => STATE_ICONS[stateOf(index)];
+    const stateIcon = (index: number) => props.value.icons[stateOf(index)];
 
     const metCount = computed(() => results.value?.filter((failed) => !failed).length ?? 0);
 

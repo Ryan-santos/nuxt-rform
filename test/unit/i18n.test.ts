@@ -45,7 +45,7 @@ describe("os packs embutidos", () => {
     });
 
     it("mantém o topo nas quatro raízes que o prefixo consegue produzir", () => {
-        // `fields.*` e `utils.*` são o que o `prefixText` escreve, um por diretório
+        // `fields.*` e `utils.*` são o que o `prefixDefaults` escreve, um por diretório
         // de componente; `presets` e `formats` são os dois espaços compartilhados
         // que nada prefixa.
         const owners = [

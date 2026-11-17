@@ -16,20 +16,26 @@ const walk = (tree: Tree, prefix: string): Tree => {
     return out;
 };
 
+/** O namespace dos aliases que o `module.ts` registra no `@nuxt/icon`. */
+export const ICON_PREFIX = "rform:";
+
 /** As duas chaves de topo que carregam mensagem sem morar em `text`. */
 const LOOSE = ["label", "placeholder"] as const;
 
 /**
  * Prefixa as chaves de tradução que o próprio componente declarou — `defaults.text`
- * é o marcador, e `label`/`placeholder` são as exceções que moram no topo. Roda
+ * é o marcador, e `label`/`placeholder` são as exceções que moram no topo — e os
+ * nomes curtos do `defaults.icons`, com o namespace `rform:`. Roda
  * **antes** do `merger`, e é o que dá procedência de graça: o que vem de prop ou de
  * `app/rform/defaults.ts` substitui o valor prefixado e fica cru. Ver
  * "`defaults.text` é o marcador" no `.claude/CLAUDE.md`.
  *
- * @example prefixText({ text: { button: "add" } }, "Array", "fields")
+ * @example prefixDefaults({ text: { button: "add" } }, "Array", "fields")
  * // → { text: { button: "rform.fields.array.add" } }
+ * @example prefixDefaults({ icons: { add: "plus" } }, "Array", "fields")
+ * // → { icons: { add: "rform:plus" } }
  */
-export default function prefixText<T extends Record<string, unknown>>(
+export default function prefixDefaults<T extends Record<string, unknown>>(
     defaults: T,
     componentName: string,
     scope: TextScope
@@ -42,6 +48,18 @@ export default function prefixText<T extends Record<string, unknown>>(
 
     if (text) {
         out.text = walk(text, prefix);
+    }
+
+    const icons = out.icons as Record<string, string> | undefined;
+
+    if (icons) {
+        // Com `:` já é nome do iconify (ou um `rform:x` por extenso); `""` esconde o ícone.
+        out.icons = Object.fromEntries(
+            Object.entries(icons).map(([role, name]) => [
+                role,
+                name === "" || name.includes(":") ? name : `${ICON_PREFIX}${name}`
+            ])
+        );
     }
 
     for (const key of LOOSE) {

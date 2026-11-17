@@ -7,8 +7,8 @@ const COMPONENTS = path.join("src", "runtime", "components");
 const MODULE = path.join("src", "module.ts");
 
 /**
- * Todo ícone do módulo passa pelo `icon()`, que prefixa o namespace `rform:` com que
- * os aliases são registrados. Estes testes existem porque as duas formas de quebrar
+ * Todo ícone do módulo é um nome curto no `defaults.icons`, que o `prefixDefaults` prefixa
+ * com o namespace `rform:` em que os aliases são registrados. Estes testes existem porque as duas formas de quebrar
  * isso são caladas — alias sem uso não avisa nada, e nome sem alias renderiza vazio
  * com um `console.warn` que ninguém lê. Ver "Os ícones vivem num namespace" no
  * `.claude/CLAUDE.md`.
@@ -44,10 +44,9 @@ describe("namespace dos ícones", () => {
         const used = new Set<string>();
 
         for (const { text } of await sources()) {
-            // Pega tanto `icon('plus')` quanto os dois ramos de um
-            // `icon(broken ? 'alert' : 'file')`.
-            for (const call of text.matchAll(/\bicon\(([^)]*)\)/g)) {
-                for (const literal of call[1]!.matchAll(/['"]([a-z][a-z-]*)['"]/g)) {
+            // Os valores do `icons: { … }` do `defaults`; `""` e nome com `:` não são alias.
+            for (const block of text.matchAll(/\bicons: \{([^}]*)\}/g)) {
+                for (const literal of block[1]!.matchAll(/:\s*"([a-z][a-z-]*)"/g)) {
                     used.add(literal[1]!);
                 }
             }
@@ -58,8 +57,8 @@ describe("namespace dos ícones", () => {
         expect(aliases.size).toBeGreaterThan(0);
         expect(used.size).toBeGreaterThan(0);
 
-        // Oferecidos ao app, não usados pelo módulo — um campo do usuário chama
-        // `icon("image")` e recebe o mesmo conjunto. Fora desta lista, alias sem uso é
+        // Oferecidos ao app, não usados pelo módulo — um campo do usuário declara
+        // `icons: { x: "image" }` e recebe o mesmo conjunto. Fora desta lista, alias sem uso é
         // bug: ninguém sabe que ele não faz nada.
         const orphans = new Set<string>(["image"]);
 
@@ -79,7 +78,7 @@ describe("namespace dos ícones", () => {
         for (const { file, text } of await sources()) {
             // Um `name="loading"` estático só resolve enquanto existir um alias `loading`
             // no espaço global — que é justamente o que o namespace tirou. Nome com `:`
-            // é iconify cru e passa; o resto tem de vir do `icon()`.
+            // é iconify cru e passa; o resto tem de vir de `props.icons`.
             for (const match of text.matchAll(/<Icon\b[^>]*?\sname="([^"]*)"/g)) {
                 if (!match[1]!.includes(":")) {
                     offenders.push(`${file}: name="${match[1]}"`);
@@ -91,11 +90,14 @@ describe("namespace dos ícones", () => {
     });
 
     it("prefixa com o mesmo nome curto que o alias do módulo", async () => {
-        // O `icon()` do runtime e o `prefixIcons` do build têm de concordar no prefixo,
-        // e nada os liga: o runtime não pode importar da raiz de `src/`, que não chega
-        // ao `dist`.
-        const helper = await readFile(path.join("src", "runtime", "utils", "icon.ts"), "utf8");
-        const prefix = /`([a-z]+):\$\{name\}`/.exec(helper)?.[1];
+        // O `prefixDefaults` do runtime e o `prefixIcons` do build têm de concordar no
+        // prefixo, e nada os liga: o runtime não pode importar da raiz de `src/`, que não
+        // chega ao `dist`.
+        const helper = await readFile(
+            path.join("src", "runtime", "utils", "prefixDefaults.ts"),
+            "utf8"
+        );
+        const prefix = /ICON_PREFIX = "([a-z]+):"/.exec(helper)?.[1];
 
         const source = await readFile(MODULE, "utf8");
         const short = /^const name = "([a-z]+)";$/m.exec(source)?.[1];

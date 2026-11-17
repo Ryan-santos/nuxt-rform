@@ -18,7 +18,27 @@ export interface Base {
     text?: TextSource;
     label?: unknown;
     placeholder?: unknown;
+    icons?: IconSource;
 }
+
+/**
+ * A forma de autoria de `defaults.icons`: papel do ícone → nome curto de alias
+ * (`"plus"`, que o `prefixDefaults` vira `rform:plus`) ou nome do iconify com `:`.
+ */
+export type IconSource = Record<string, string>;
+
+/**
+ * A prop `icons` de um componente, derivada do próprio `defaults.icons`. Ver "A prop
+ * `icons`" no `.claude/CLAUDE.md`.
+ */
+export type IconsProp<T> = {
+    icons?: IconTree<T>;
+};
+
+/** Os papéis do `defaults.icons`, cada um opcional. */
+export type IconTree<T> = {
+    [K in keyof T]?: string;
+};
 
 /** A forma de autoria de `defaults.text`: grupos aninhados de chaves de mensagem. */
 export interface TextSource {
@@ -116,7 +136,7 @@ export type TextProp<T> = {
 
 /**
  * O mesmo componente visto do próprio `defaults` em vez do call site: igual a
- * `Props`, menos `text`, que ainda guarda o sufixo cru que o `prefixText` não
+ * `Props`, menos `text`, que ainda guarda o sufixo cru que o `prefixDefaults` não
  * expandiu. Ver "`WithTextSource<P>`" no `.claude/CLAUDE.md`.
  */
 export type WithTextSource<P> = Omit<P, "text"> & { text?: TextSource };

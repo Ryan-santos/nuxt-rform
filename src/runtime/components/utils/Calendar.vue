@@ -6,7 +6,7 @@
                 :class="props.ui?.header?.nav"
                 @click="shiftView(-1)"
             >
-                <Icon :name="icon('chevron-left')" />
+                <Icon :name="props.icons.prev" />
             </button>
             <div :class="props.ui?.header?.title?.container">
                 <button
@@ -33,7 +33,7 @@
                 :class="props.ui?.header?.nav"
                 @click="shiftView(1)"
             >
-                <Icon :name="icon('chevron-right')" />
+                <Icon :name="props.icons.next" />
             </button>
         </div>
 
@@ -162,8 +162,8 @@
     import { computed, ref, watch } from "vue";
 
     import { useUtil } from "#rform/composables";
-    import type { DeepPartialUI, TextProp } from "#rform/types";
-    import { dateFormat, defineDefaults, inputValue, vMask, icon } from "#rform/utils";
+    import type { DeepPartialUI, IconsProp, TextProp } from "#rform/types";
+    import { dateFormat, defineDefaults, inputValue, vMask } from "#rform/utils";
 
     import { formatTime, pad, parseTime } from "../fields/Hour.vue";
 
@@ -323,17 +323,22 @@
             start: "start",
             end: "end",
             time: "time"
+        },
+        icons: {
+            prev: "chevron-left",
+            next: "chevron-right"
         }
     });
 
     // Um util escreve `Props` à mão — não há `Element` aqui, então a árvore de
     // `text` entra pelo `TextProp`.
-    export type Props = TextProp<typeof defaults.text> & {
-        mode?: Mode;
-        time?: boolean;
-        disable?: DisableSpec;
-        ui?: DeepPartialUI<typeof defaults.ui>;
-    };
+    export type Props = TextProp<typeof defaults.text> &
+        IconsProp<typeof defaults.icons> & {
+            mode?: Mode;
+            time?: boolean;
+            disable?: DisableSpec;
+            ui?: DeepPartialUI<typeof defaults.ui>;
+        };
 
     const stripTime = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
