@@ -87,6 +87,7 @@
 
     export type Props = Element<typeof defaults, "textarea"> &
         Autocomplete &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
         Utils["Loading"] &

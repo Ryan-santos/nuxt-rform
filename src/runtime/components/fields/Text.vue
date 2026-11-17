@@ -86,6 +86,7 @@
 
     export type Props = Element<typeof defaults, "text"> &
         Autocomplete &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
         Utils["Loading"] &

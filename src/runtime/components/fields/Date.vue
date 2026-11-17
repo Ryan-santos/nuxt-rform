@@ -193,6 +193,7 @@
         "modelValue" | "onUpdate:modelValue" | "default"
     > &
         Autocomplete &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Dropdown"] &
         Utils["Error"] &
@@ -216,6 +217,7 @@
         "modelValue" | "onUpdate:modelValue" | "default"
     > &
         Autocomplete &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Dropdown"] &
         Utils["Error"] &

@@ -173,6 +173,7 @@
     });
 
     export type Props = Element<typeof defaults, "color"> &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Dropdown"] &
         Utils["Error"] &

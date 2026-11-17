@@ -98,6 +98,7 @@
 
     export type Props = Element<typeof defaults, "switch"> &
         IconsProp<typeof defaults.icons> &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
         Utils["Placeholder"];

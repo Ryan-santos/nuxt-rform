@@ -174,6 +174,7 @@
 
     export type Props = Element<typeof defaults, "hour", TimeValue> &
         Autocomplete &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
         Utils["Loading"] &

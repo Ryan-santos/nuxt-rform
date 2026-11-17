@@ -114,6 +114,7 @@
     export type Props = Element<typeof defaults, "number", null | number> &
         Autocomplete &
         IconsProp<typeof defaults.icons> &
+        Utils["Label"] &
         Utils["Description"] &
         Utils["Error"] &
         Utils["Loading"] &

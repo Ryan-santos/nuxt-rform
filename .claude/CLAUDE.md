@@ -636,6 +636,15 @@ O tipo sai do template `types/components/utils/props`: cada `Utils["<Nome>"]` tr
 um condicional (`Utils["X"] extends { icons?: infer I } ? I : never`), e o
 compiler-sfc aguenta porque a chave `icons` existe sempre — ele só precisa saber que
 é `Object`. Util sem ícone fica com `<Nome>?: never`.
+
+**Todo util que o campo renderiza entra inteiro no `Props`**, como `Utils["<Nome>"] &`.
+É ele que dá ao campo os galhos `ui.Utils.<Nome>` e `icons.Utils.<Nome>`, e o `text`
+que o util herda pelo `useUtil`. **Isso já foi `Pick<Utils["<Nome>"], "icons">`** no
+`RDate` (o `Calendar`) e no `RFile` (o `FileItem`): o runtime honrava o
+`ui.Utils.Calendar`, e o tipo o recusava. Sete campos também renderizavam o
+`RUtilsLabel` sem `Utils["Label"]`, com o mesmo efeito. A guarda é
+`test/fixtures/basic/components/UtilBranchTypes.vue`.
+
 Na leitura o `icons` do campo é **completo** e sem `Utils` (`FieldProps` troca o
 `IconTree` parcial por `{ [K]-?: string }` e exclui a chave), porque o
 `defaults.icons` semeia todo papel — a mesma volta do `ResolvedUI`.
