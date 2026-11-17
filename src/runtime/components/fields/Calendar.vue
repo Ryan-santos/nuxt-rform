@@ -64,7 +64,9 @@
 <script setup lang="ts" generic="M extends Mode = 'single'">
     const _props = withDefaults(defineProps<Props<M>>(), {
         disabled: undefined,
-        required: undefined
+        required: undefined,
+        loading: undefined,
+        time: undefined
     });
 
     const { props } = useField(_props as unknown as InternalProps);

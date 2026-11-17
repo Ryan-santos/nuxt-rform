@@ -241,7 +241,8 @@
         loading: undefined,
         disabled: undefined,
         upload: undefined,
-        remove: undefined
+        remove: undefined,
+        multiple: undefined
     });
 
     // Opcionais, e não só por serem: um slot obrigatório no tipo faz `h(RFile, props)`

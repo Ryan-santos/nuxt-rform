@@ -187,7 +187,8 @@
     const _props = withDefaults(defineProps<Props>(), {
         required: undefined,
         disabled: undefined,
-        loading: undefined
+        loading: undefined,
+        range: undefined
     });
 
     const { model, props, tr } = useField(_props);

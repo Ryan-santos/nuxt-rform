@@ -31,16 +31,14 @@ describe("a prop search do RSelect", () => {
         expect(wrapper.findAll("input[type=search]")).toHaveLength(1);
     });
 
-    // Limite conhecido: a regra "não apaga" do `merger` pula quando o resultado é
-    // truthy e o valor novo é falsy, então o `true` do app vence a tag. Desligar
-    // num campo só exigiria ler a prop crua, como o `upload` do `RFile`.
-    it("não é desligada na tag sobre o que o defineFieldDefaults ligou", async () => {
+    // O `merger` aceita `false`: a tag desliga o que o app ligou.
+    it("é desligada na tag sobre o que o defineFieldDefaults ligou", async () => {
         const wrapper = await mountSuspended(RSelect, {
             props: { options: ["a", "b"], search: false } as never
         });
 
         await open(wrapper);
 
-        expect(wrapper.findAll("input[type=search]")).toHaveLength(1);
+        expect(wrapper.findAll("input[type=search]")).toHaveLength(0);
     });
 });

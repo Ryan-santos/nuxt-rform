@@ -229,7 +229,8 @@
     const _props = withDefaults(defineProps<Props<M>>(), {
         disabled: undefined,
         required: undefined,
-        loading: undefined
+        loading: undefined,
+        time: undefined
     });
 
     const { model, props, tr } = useField(_props as unknown as InternalProps);

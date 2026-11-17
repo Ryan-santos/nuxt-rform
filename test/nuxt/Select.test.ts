@@ -141,3 +141,63 @@ describe("RSelect", () => {
         expect(emits?.at(-1)?.[0]).toEqual(["a"]);
     });
 });
+
+const expanded = (wrapper: {
+    get: (s: string) => { attributes: (n: string) => string | undefined };
+}) => wrapper.get('[aria-haspopup="listbox"]').attributes("aria-expanded");
+
+const pickFirst = async (wrapper: {
+    get: (s: string) => { trigger: (e: string) => Promise<void> };
+    findAll: (s: string) => { trigger: (e: string) => Promise<void> }[];
+}) => {
+    await open(wrapper);
+    await wrapper.findAll('[role="option"]')[0]!.trigger("click");
+};
+
+/**
+ * `true` fecha sempre, `false` nunca, e o nome de um modo fecha só nele. Sem a
+ * prop vale `"single"`.
+ */
+describe("closeOnSelect do RSelect", () => {
+    const cases = [
+        { closeOnSelect: undefined, multiple: false, closed: true },
+        { closeOnSelect: undefined, multiple: true, closed: false },
+        { closeOnSelect: "single", multiple: false, closed: true },
+        { closeOnSelect: "single", multiple: true, closed: false },
+        { closeOnSelect: "multiple", multiple: false, closed: false },
+        { closeOnSelect: "multiple", multiple: true, closed: true },
+        { closeOnSelect: true, multiple: false, closed: true },
+        { closeOnSelect: true, multiple: true, closed: true },
+        { closeOnSelect: false, multiple: false, closed: false },
+        { closeOnSelect: false, multiple: true, closed: false }
+    ] as const;
+
+    it.each(cases)(
+        "closeOnSelect $closeOnSelect com multiple $multiple: fechado $closed",
+        async ({ closeOnSelect, multiple, closed }) => {
+            const wrapper = await mountSuspended(RSelect, {
+                props: {
+                    options: ["a", "b"],
+                    multiple,
+                    modelValue: multiple ? [] : null,
+                    closeOnSelect
+                } as never
+            });
+
+            await pickFirst(wrapper);
+
+            expect(expanded(wrapper)).toBe(String(!closed));
+            expect(wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toEqual(
+                multiple ? ["a"] : "a"
+            );
+        }
+    );
+
+    // `Boolean` antes de `String` na declaração de runtime: o atributo sem valor
+    // chega `true`, e não `""`.
+    it("a forma curta vale true", () => {
+        const decl = (RSelect as { props?: Record<string, { type?: unknown }> }).props;
+
+        expect(decl?.closeOnSelect?.type).toEqual([Boolean, String]);
+    });
+});

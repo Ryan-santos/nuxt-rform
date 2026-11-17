@@ -76,6 +76,7 @@ Os `import()` de `.vue` nos templates de tipo saem **relativos**. O `@vue/compil
 ### useField (`src/runtime/composables/useField.ts`)
 
 - Lê o pai (Form) via `inject(key)`. Quando há pai e `props.name` está definido, `model.value` lê/escreve diretamente em `upper.model.value[name]` — é por isso que mutações em arrays no model do filho refletem no Form.
+- **O `merger` só pula `undefined`.** `false`, `0`, `""` e `null` são valor e vencem o que veio antes — `merger({ teste: "single" }, { teste: false })` dá `false`. Já houve uma regra "não apaga" (pular quando o resultado é truthy e o valor novo é falsy), desde o commit inicial e sem motivo registrado: ela tornava impossível um `:search="false"` desligar o que o `defineFieldDefaults` ligou, e espalhou leituras de `_props` cru pelo módulo para contorná-la. A contrapartida é o boolean casting: toda prop booleana de campo entra no `withDefaults` como `undefined`, senão a ausente chegaria `false` e apagaria o padrão do app. `test/nuxt/booleanProps.test.ts` varre a declaração de runtime de todo campo e do `Form` e reprova a booleana sem `default` — foi ele que achou o `loading` e o `time` do `RCalendar`. Comentários que ainda citam a regra "não apaga" (o `debounce`, o `minHeight`, o `focusError`, o `fnProp`) descrevem contornos que hoje funcionam sem ela.
 - Mescla `defaults` + defaults do usuário + `localProps` + `sourceProps` via `merger` — e sobrescreve o `error` depois, que é a única prop com duas procedências (ver "O `error` é `TrInput`", adiante) — depois de passar o `defaults` do componente pelo `prefixText`, que é o que dá procedência de graça ao texto (ver `defaults.text`, na seção de i18n).
 - **Os defaults vêm do vite plugin, não do registry.** O `#rform/registry` deixou de ser `nome → () => import(path)` e passou a ser **o conjunto de nomes que o build conhece** — dois `ReadonlySet<string>` mais os `hooks` —, porque era só isso que sobrava dele: a pergunta do guard. Os thunks existiam para a composable buscar o `defaults`, e ninguém mais busca.
 - Por tabela, o registry deixou de carregar caminho, e a prova de precedência mudou de casa: quem mostra que `app/rform/fields/Switch.vue` venceu o embutido é o `components-map.ts`, que importa cada campo estaticamente. `customComponents.test.ts` lê os dois — o nome uma vez só no registry, o caminho no mapa.
@@ -1725,21 +1726,18 @@ são dez erros e duas diretivas ociosas.
 #### A busca é opt-in, e o ref teve de mudar de nome
 
 `search: false` mora no `defaults`, então o painel abre sem busca e `<RSelect
-search>` a liga. No `defaults` e não fora dele como o `focusError` do `RForm`: a
-regra "não apaga" do `merger` só morde quando o **resultado** já é truthy, e um
-default falsy não é — as duas direções passam.
+search>` a liga.
 
 Ela ainda entra no `withDefaults` como `undefined`, junto do `disabled`: sem isso
 o boolean casting faria a prop ausente chegar como `false`, e um
 `defineFieldDefaults({ Select: { search: true } })` seria apagado por todo campo
 que não escrevesse a prop.
 
-**O limite é o outro sentido**, e é o mesmo do `upload`/`remove` do `RFile`: com o
-app ligando a busca pelo `defineFieldDefaults`, `:search="false"` numa tag não a
-desliga — o `true` é o resultado truthy que a regra protege. Desligar num campo só
-exigiria ler o `_props` cru. `test/nuxt/selectSearch.test.ts` grava as duas
-direções; o caso sem defaults do app fica no `Select.test.ts`, porque o `vi.mock`
-é do arquivo inteiro.
+**As duas direções passam**: com o app ligando a busca, `:search="false"` numa tag
+a desliga. Isso já foi limite conhecido, enquanto o `merger` pulava o falsy sobre
+um resultado truthy. `test/nuxt/selectSearch.test.ts` grava as duas direções; o
+caso sem defaults do app fica no `Select.test.ts`, porque o `vi.mock` é do
+arquivo inteiro.
 
 **O termo digitado virou `term`, e não é gosto.** O vue-tsc intersecciona as props
 com os bindings do `setup` para montar o contexto do template, então um
@@ -2098,6 +2096,30 @@ da própria intenção, e o `clear` continua lá.
 comportamento de quem já o usa hoje, e deixaria sem saída o campo que não é
 obrigatório e também não quer o botão (o seletor de idioma da issue, que nem está
 num `RForm`).
+
+#### `closeOnSelect`: `boolean | "single" | "multiple"`
+
+Escolher fecha o painel quando `closeOnSelect` casa com o modo: `true` sempre,
+`false` nunca, e o nome de um modo só nele. O default é `"single"`, no
+`defaults` — quem marca vários quer marcar vários. Era a issue #13: o `select()`
+nunca tocava no `open`, e o select simples pedia um clique a mais depois de toda
+escolha.
+
+O `false` da tag vence o `"single"` do `defaults` e um `true` do
+`defineFieldDefaults` porque o `merger` só pula `undefined` (ver o `useField`). E
+`closeOnSelect: undefined` entra no `withDefaults`, senão o boolean casting faria a
+prop ausente chegar `false` e apagaria os dois. `test/nuxt/selectCloseOnSelect.test.ts`
+mocka um `true` no app e exige que o `false` da tag vença.
+
+A união compila para `type: [Boolean, String]`, nessa ordem, e é a ordem que faz
+o `<RSelect close-on-select>` sem valor chegar `true` em vez de `""`. O teste
+asserta a declaração de runtime, porque a forma curta é a que quebraria calada.
+
+O computed chama-se `closes` (a parede do `search`/`term`), e o `select()` virou
+`write()` + fechamento: o ramo simples tem `return` antecipado, e o fechamento
+precisa de um ponto só. Fechar não reseta nada — os watchers de `open` só agem na
+abertura. As guardas são o `describe("closeOnSelect do RSelect")` de
+`Select.test.ts` e `test/nuxt/selectCloseOnSelect.test.ts`, que mocka os defaults.
 
 #### `components/internal/` é uma terceira categoria
 

@@ -33,13 +33,10 @@ export default function merger<T extends Array<OBJ>>(...objects: T) {
             const resultValue = result?.[key];
             const currentValue = current[key];
 
-            // `undefined` é "não passei", nunca "apaga": `defineProps` preenche toda
-            // chave declarada, então prop ausente apagaria um default falsy.
+            // `undefined` é "não passei"; `false`, `0`, `""` e `null` são valor e
+            // vencem. Por isso toda prop booleana de campo entra no `withDefaults`
+            // como `undefined` — o boolean casting a faria chegar `false`.
             if (currentValue === undefined) {
-                continue;
-            }
-
-            if (resultValue && !currentValue) {
                 continue;
             }
 

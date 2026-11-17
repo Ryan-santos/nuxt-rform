@@ -14,10 +14,16 @@ describe("merger", () => {
         expect(result).toEqual({ a: 1, b: 3, c: 4 });
     });
 
-    it("mantém o valor existente quando o posterior é null/undefined e o existente é truthy", () => {
-        const result = merger({ a: 1, b: 2 }, { a: null, b: undefined });
+    it("mantém o valor existente quando o posterior é undefined", () => {
+        const result = merger({ a: 1 }, { a: undefined });
         expect(result.a).toBe(1);
-        expect(result.b).toBe(2);
+    });
+
+    it('um falsy posterior vence o truthy existente — só undefined é "não passei"', () => {
+        expect(merger({ teste: "single" }, { teste: false }).teste).toBe(false);
+        expect(merger({ a: 300 }, { a: 0 }).a).toBe(0);
+        expect(merger({ a: "x" }, { a: "" }).a).toBe("");
+        expect(merger({ a: 1 }, { a: null }).a).toBeNull();
     });
 
     it("mescla objeto aninhado recursivamente", () => {

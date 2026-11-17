@@ -297,7 +297,11 @@
      * aparece no campo enquanto há algo escolhido. `clearable: false` recusa o
      * gesto nos dois lugares, para o campo cujo model não admite vazio.
      *
+     * Escolher fecha o painel sem `multiple` e o mantém aberto com ele — o
+     * `closeOnSelect="single"` de default; `true`, `false` e `"multiple"` mudam isso.
+     *
      * @example <RSelect name="uf" :options="ufs" multiple search />
+     * @example <RSelect name="tags" :options="tags" multiple close-on-select="multiple" />
      * @example <RSelect name="form" :options :loading @search="buscar" />
      * @example <RSelect name="idioma" :options="locales" :clearable="false" />
      */
@@ -523,6 +527,7 @@
         // não é array, então `:pick="{ value: 'codigo' }"` conserva o `label` daqui.
         pick: { value: "id", label: "name" },
         search: false,
+        closeOnSelect: "single" as CloseOnSelect,
         text: {
             search: "search",
             loading: "loading",
@@ -534,6 +539,12 @@
             count: "count"
         }
     });
+
+    /**
+     * Quando escolher fecha o painel: `true` sempre, `false` nunca, e o nome de um
+     * modo fecha só nele — `"single"` sem `multiple`, `"multiple"` com.
+     */
+    export type CloseOnSelect = boolean | "single" | "multiple";
 
     /** O que uma seleção guarda: o item inteiro com `modelFull`, senão só o `value`. */
     export type SelectedOf<
@@ -594,6 +605,8 @@
             search?: boolean;
             /** Oferece o gesto de esvaziar — o X do campo e o botão do rodapé. */
             clearable?: boolean;
+            /** Quando escolher fecha o painel: sempre, nunca, ou só num dos modos. Default `"single"`. */
+            closeOnSelect?: CloseOnSelect;
             onSearch?: (term: string) => void;
             default?: ModelOf<Opts, KeyValue, ModelFull, Multiple>;
             modelValue?: ModelOf<Opts, KeyValue, ModelFull, Multiple>;
@@ -620,6 +633,7 @@
             multiple?: boolean;
             search?: boolean;
             clearable?: boolean;
+            closeOnSelect?: CloseOnSelect;
             onSearch?: (term: string) => void;
             default?: unknown;
             modelValue?: unknown;
@@ -637,20 +651,20 @@
         ModelFull extends boolean = false
     "
 >
-    // `disabled: undefined` como nos outros campos: `disabled?: boolean` compila com
-    // `type: Boolean`, e o boolean casting do Vue apagaria a diferença entre a prop
-    // ausente e um `:disabled="false"`. Este era o único campo sem `withDefaults`
-    // nenhum — o `required` e o `loading` daqui continuam sendo castados. O `search`
-    // entra pelo mesmo motivo: sem isso a prop ausente chegaria como `false` e
-    // apagaria um `defineFieldDefaults({ Select: { search: true } })`. O
-    // `clearable` idem, e ele ainda depende disso para o `!== false` distinguir
-    // "não declarei" de "declarei desligado".
+    // Toda prop booleana entra como `undefined`: o boolean casting do Vue faria a
+    // ausente chegar `false`, e o `merger` aceita `false` — apagaria o `defaults` e o
+    // `defineFieldDefaults` de todo campo que não escrevesse a prop.
     const _props = withDefaults(
         defineProps<Props<Opts, Multiple, KeyValue, KeyLabel, ModelFull>>(),
         {
+            required: undefined,
+            loading: undefined,
             disabled: undefined,
+            multiple: undefined,
+            modelFull: undefined,
             search: undefined,
             clearable: undefined,
+            closeOnSelect: undefined,
             resolve: undefined
         }
     );
@@ -773,7 +787,22 @@
         });
     });
 
-    const select = (option: Item) => {
+    const open = ref(false);
+
+    // `closes`, e não `closeOnSelect`: binding com o nome de uma prop reduz o
+    // componente a `never`.
+    const closes = computed(() => {
+        const mode = props.value.closeOnSelect ?? "single";
+
+        if (typeof mode === "boolean") {
+            return mode;
+        }
+
+        return mode === (props.value.multiple ? "multiple" : "single");
+    });
+
+    /** Grava a escolha: troca o valor, ou alterna o item da lista em `multiple`. */
+    const write = (option: Item) => {
         const stored = props.value.modelFull ? option.original : option.value;
 
         // Semeia **antes** de escrever no model: é o que faz o rótulo sobreviver a
@@ -807,6 +836,14 @@
         }
 
         model.value = list;
+    };
+
+    const select = (option: Item) => {
+        write(option);
+
+        if (closes.value) {
+            open.value = false;
+        }
     };
 
     /** Os valores que estão no model, sempre como lista. */
@@ -928,8 +965,6 @@
     const rowSlot = (option: Item): Selected => {
         return (props.value.multiple ? [option] : option) as Selected;
     };
-
-    const open = ref(false);
 
     // O mínimo é lido cru na frente, como o `debounce`: um default truthy do app
     // engoliria `:min-height="0"` pela regra "não apaga" do `merger`, e abrir
