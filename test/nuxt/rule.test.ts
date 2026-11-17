@@ -5,6 +5,8 @@ import { h, nextTick } from "vue";
 
 import { RForm, RText } from "#components";
 
+import useRForm from "../../src/runtime/composables/useRForm";
+
 // Um campo só registra o validador quando um Form provê o registro de rules, então
 // todo caso aqui passa pela cadeia de verdade: useField → resolveRule → validation.
 const mountField = async (rule: unknown, model: Record<string, unknown>) => {
@@ -74,5 +76,44 @@ describe("presets de rule num campo vivo", () => {
 
         const short = await mountField(["required", { name: "min", min: 3 }], { campo: "ab" });
         expect(await short.validate()).toContain("Mínimo de 3 caracteres.");
+    });
+});
+describe("preset schema", () => {
+    it("valida o campo pelo JSON Schema", async () => {
+        const rule = { name: "schema", schema: { type: "string", pattern: "^PED-" } };
+
+        const bad = await mountField(rule, { campo: "x" });
+        expect(await bad.validate()).toContain("pattern");
+
+        const good = await mountField(rule, { campo: "PED-1" });
+        expect(await good.validate()).not.toContain("pattern");
+    });
+
+    it("mostra o message no lugar da mensagem do zod", async () => {
+        const field = await mountField(
+            {
+                name: "schema",
+                schema: { type: "string", pattern: "^PED-" },
+                message: "Formato inválido."
+            },
+            { campo: "x" }
+        );
+
+        expect(await field.validate()).toContain("Formato inválido.");
+    });
+
+    it("entra no rules agregado do useRForm", async () => {
+        const { rules } = useRForm({
+            pedido: {
+                type: "text",
+                rule: { name: "schema", schema: { type: "string", minLength: 3 } }
+            }
+        });
+
+        const bad = await rules.safeParseAsync({ pedido: "ab" });
+        expect(bad.success).toBe(false);
+        expect(bad.error?.issues[0]?.path).toEqual(["pedido"]);
+
+        expect((await rules.safeParseAsync({ pedido: "abc" })).success).toBe(true);
     });
 });
