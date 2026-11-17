@@ -14,7 +14,7 @@
         "@iconify-json/eos-icons": "1.2.4",
         "@iconify-json/fa6-regular": "1.2.4",
         "@iconify-json/fa6-solid": "1.2.4",
-        "@iconify-json/logos": "1.2.18",
+        "@iconify-json/logos": "1.2.20",
         "@iconify-json/mi": "1.2.2",
         "@iconify-json/ooui": "1.2.25",
         "@iconify-json/twemoji": "1.2.5",
@@ -22,8 +22,8 @@
         "@nuxt/icon": "2.6.2",
         "@nuxtjs/color-mode": "4.1.0",
         "@nuxtjs/i18n": "10.6.0",
-        "@tailwindcss/vite": "4.3.3",
-        "nuxt": "4.6.3",
-        "tailwindcss": "4.3.3"
+        "@tailwindcss/vite": "4.3.5",
+        "nuxt": "4.6.4",
+        "tailwindcss": "4.3.5"
     }
 }

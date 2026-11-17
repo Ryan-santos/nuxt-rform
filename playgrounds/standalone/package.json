@@ -19,8 +19,8 @@
         "@nuxt/fonts": "1.2.0",
         "@nuxt/icon": "2.6.2",
         "@nuxtjs/color-mode": "4.1.0",
-        "@tailwindcss/vite": "4.3.3",
-        "nuxt": "4.6.3",
-        "tailwindcss": "4.3.3"
+        "@tailwindcss/vite": "4.3.5",
+        "nuxt": "4.6.4",
+        "tailwindcss": "4.3.5"
     }
 }
