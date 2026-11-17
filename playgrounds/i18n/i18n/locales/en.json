@@ -14,7 +14,10 @@
         "uf": "State",
         "selecione": "select",
         "nascimento": "Birth date",
-        "aceiteTermos": "I have read and accept the terms"
+        "aceiteTermos": "I have read and accept the terms",
+        "plano": "Plan",
+        "tamanho": "Size",
+        "corFavorita": "Favorite color"
     },
     "empresa": {
         "razaoSocial": "Legal name",

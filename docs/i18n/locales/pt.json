@@ -226,6 +226,13 @@
             "newsletter": "Newsletter",
             "idioma": "Idioma"
         },
+        "radio": {
+            "pagamento": "Forma de pagamento",
+            "tamanho": "Tamanho",
+            "plano": "Plano",
+            "porMes": "R$ {preco}/mês",
+            "erro": "Essa opção não está disponível na sua região."
+        },
         "presets": {
             "uf": "Use a sigla da UF, em maiúsculas: SP, RJ, BA."
         },

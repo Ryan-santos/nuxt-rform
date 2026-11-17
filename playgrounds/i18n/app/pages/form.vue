@@ -191,6 +191,33 @@
                 </RSelect>
             </RForm>
         </Scenario>
+
+        <Scenario
+            title="radio"
+            :value="radio"
+        >
+            <RForm
+                v-model="radio"
+                class="flex flex-col gap-4"
+            >
+                <RRadio
+                    name="tamanho"
+                    label="form.tamanho"
+                    :options="['P', 'M', 'G']"
+                />
+                <RRadio
+                    name="plano"
+                    label="form.plano"
+                    :options="planos"
+                    :pick="{ value: 'id', label: 'nome' }"
+                />
+                <RRadio
+                    name="cor"
+                    label="form.corFavorita"
+                    :options="{ blue: 'azul', red: 'vermelho', green: 'verde' }"
+                />
+            </RForm>
+        </Scenario>
     </div>
 </template>
 
@@ -221,4 +248,12 @@
     const data = ref<Record<string, unknown>>({});
 
     const select = ref<Record<string, unknown>>({});
+
+    const planos = [
+        { id: 1, nome: "Básico" },
+        { id: 2, nome: "Pro" },
+        { id: 3, nome: "Empresa" }
+    ];
+
+    const radio = ref<Record<string, unknown>>({});
 </script>

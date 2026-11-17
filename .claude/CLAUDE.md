@@ -682,6 +682,18 @@ Não havia **nenhum** teste montando o `RFile`, e a lista é a prova do que isso
 - **`<Icon name="close" />` nunca existiu** na lista de aliases do `module.ts`. Os cinco novos são `file`, `image`, `upload`, `retry` e `cancel`; remover continua sendo o `remove` que o `RArray` já usa.
 - **`useIsURL(model.value as unknown as string)`** rodava um regex sobre um `File` ou sobre um array coagido a string. Funcionava por acidente.
 
+### `RRadio`: as opções do `RSelect`, sempre visíveis
+
+Aceita os três formatos de `options` e o `pick` do `RSelect`, e passa pelo mesmo
+`normalizeOptions`. Os aliases de tipo (`OptionOf`, `ValueOf`, `LabelOf`,
+`OptionKey`…) desceram do `Select.vue` para `src/runtime/type.d.ts` por isso; o
+`Select.vue` ainda os reexporta, para o `#rform/builtin/fields/Select.vue` continuar
+alcançando. `SelectedOf`/`ModelOf` ficaram lá: `modelFull` e `multiple` são só dele.
+
+A identidade de uma opção é o `keyOf`, a mesma do `RSelect` — `1` e `"1"` são opções
+diferentes. O input é `:checked` + `@change`, nunca `v-model`. Guarda de tipo em
+`test/fixtures/basic/components/RadioTypes.vue`.
+
 ### Presets (rules e masks)
 
 Um arquivo = um preset. O nome vem do caminho relativo em camelCase (`br/insc-est.ts` → `brInscEst`).

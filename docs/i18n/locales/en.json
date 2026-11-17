@@ -226,6 +226,13 @@
             "newsletter": "Newsletter",
             "idioma": "Language"
         },
+        "radio": {
+            "pagamento": "Payment method",
+            "tamanho": "Size",
+            "plano": "Plan",
+            "porMes": "R$ {preco}/month",
+            "erro": "That option is not available in your region."
+        },
         "presets": {
             "uf": "Use the two-letter state code, in capitals: SP, RJ, BA."
         },

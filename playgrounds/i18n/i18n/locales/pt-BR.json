@@ -14,7 +14,10 @@
         "uf": "UF",
         "selecione": "selecione",
         "nascimento": "Nascimento",
-        "aceiteTermos": "Li e aceito os termos"
+        "aceiteTermos": "Li e aceito os termos",
+        "plano": "Plano",
+        "tamanho": "Tamanho",
+        "corFavorita": "Cor favorita"
     },
     "empresa": {
         "razaoSocial": "Razão social",
