@@ -365,6 +365,57 @@ export type OptionItem<O = unknown, V = unknown, L = unknown> = {
     original: O;
 };
 
+/** O item bruto de `options`: elemento do array, ou valor do objeto. */
+export type OptionOf<Opts> = Opts extends readonly (infer U)[]
+    ? U
+    : Opts extends Record<string | number, infer V>
+      ? V
+      : unknown;
+
+/** O que o `original` de uma opção guarda — e, com `modelFull`, o que vai ao model. */
+export type OriginalOf<Opts> = Opts extends readonly (infer U)[]
+    ? U
+    : Opts extends Record<string | number, infer V>
+      ? Record<string | number, V>
+      : unknown;
+
+/**
+ * `item[K]`, e o próprio item quando ele é primitivo. Cai em `unknown` quando `K`
+ * não é chave simples — um caminho pontilhado (`user.id`), que o `getProperty`
+ * resolve mas o `keyof` não enxerga.
+ */
+export type PropOf<U, K extends string> = U extends Primitive
+    ? U
+    : K extends keyof U
+      ? U[K]
+      : unknown;
+
+/**
+ * A chave de um `options` em forma de objeto. `Object.entries` devolve a chave já
+ * convertida, então uma chave numérica sai `string` — estreitar seria mentira.
+ */
+export type KeyOf<Opts> = keyof Opts extends string ? keyof Opts : string;
+
+/** O `value` de uma opção: `item[pick.value]` no array, a chave no objeto. */
+export type ValueOf<Opts, KV extends string> = Opts extends readonly (infer U)[]
+    ? PropOf<U, KV>
+    : KeyOf<Opts>;
+
+/** O `label` de uma opção: `item[pick.label]`, ou o próprio item quando primitivo. */
+export type LabelOf<Opts, KL extends string> = Opts extends readonly (infer U)[]
+    ? PropOf<U, KL>
+    : Opts extends Record<string | number, infer V>
+      ? PropOf<V, KL>
+      : unknown;
+
+/**
+ * As chaves que o `pick` sugere, sem fechar o campo: o `string & {}` é o que
+ * mantém `pick: { value: "user.id" }` válido, e sem ele o `getProperty` perderia
+ * o caminho pontilhado que ele sabe resolver.
+ */
+export type OptionKey<Opts> =
+    OptionOf<Opts> extends Primitive ? string : (keyof OptionOf<Opts> & string) | (string & {});
+
 /**
  * O que o campo dá à função de `options`. `page` é **1-based**, e um array vazio
  * encerra a paginação — não há cursor a montar.
