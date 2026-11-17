@@ -67,6 +67,10 @@ describe("preset schema", () => {
         );
     });
 
+    it("lança mesmo com o campo vazio", () => {
+        expect(() => run("", { schema: { type: "strng" } })).toThrow(/\[rform\].*strng/);
+    });
+
     it("converte uma vez por objeto de schema", () => {
         const same = { type: "string" };
 

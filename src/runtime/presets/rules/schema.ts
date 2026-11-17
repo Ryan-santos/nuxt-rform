@@ -4,13 +4,17 @@ import type { JSONSchema } from "zod/v4/core";
 import { defineRule, type RuleContext } from "../../utils/definePreset";
 import { check, isBlank } from "../helpers";
 
+// Frouxo de propósito: o JSON vem do back, e o tipo do zod recusa array readonly
+// (`enum` em `as const`). Quem confere as keywords é o `fromJSONSchema`.
+type Source = Readonly<Record<string, unknown>> | boolean;
+
 // Pela identidade do objeto: o schema vem do `RDynamic` e é o mesmo a cada validação.
 const cache = new WeakMap<object, ZodType>();
 
 // Único ponto que chama o `fromJSONSchema`, que o zod marca como semi-experimental.
-const convert = (schema: JSONSchema._JSONSchema): ZodType => {
+const convert = (schema: Source): ZodType => {
     try {
-        return z.fromJSONSchema(schema);
+        return z.fromJSONSchema(schema as JSONSchema._JSONSchema);
     } catch (error) {
         throw new Error(
             `[rform] rule "schema": cannot convert JSON Schema — ${(error as Error).message}`
@@ -18,7 +22,7 @@ const convert = (schema: JSONSchema._JSONSchema): ZodType => {
     }
 };
 
-const toZod = (schema: JSONSchema._JSONSchema): ZodType => {
+const toZod = (schema: Source): ZodType => {
     if (typeof schema === "boolean") {
         return convert(schema);
     }
@@ -40,16 +44,15 @@ const toZod = (schema: JSONSchema._JSONSchema): ZodType => {
  * @example { name: "schema", schema: { type: "string", pattern: "^PED-" }, message: "Formato PED-000000." }
  */
 export default defineRule({
-    validation: ({
-        value,
-        schema,
-        message
-    }: RuleContext<{ schema: JSONSchema._JSONSchema; message?: string }>) => {
+    validation: ({ value, schema, message }: RuleContext<{ schema: Source; message?: string }>) => {
+        // Converte antes do `isBlank`: um schema quebrado lança já com o campo vazio.
+        const zod = toZod(schema);
+
         if (isBlank(value)) {
             return undefined;
         }
 
-        const error = check(toZod(schema), value);
+        const error = check(zod, value);
 
         return error === undefined ? undefined : (message ?? error);
     }
