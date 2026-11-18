@@ -277,10 +277,13 @@ export default defineNuxtModule<ModuleOptions>({
                 [
                     "type Utils = import('./').default",
                     "",
+                    // O `Readonly` repete toda prop do util, e é o que tira o `label`, o
+                    // `placeholder` e afins do TS2590 — ver "Toda prop `TrInput` do topo
+                    // aparece duas vezes" no `.claude/CLAUDE.md`.
                     utils
                         .map(
                             ({ name }) =>
-                                `export type ${name} = Omit<Utils["${name}"], "ui" | "icons"> & { ui?: { Utils?: { ${name}?: Utils["${name}"]["ui"] } }; icons?: { Utils?: { ${name}?: Utils["${name}"] extends { icons?: infer I } ? I : never } } }`
+                                `export type ${name} = Omit<Utils["${name}"], "ui" | "icons"> & Readonly<Omit<Utils["${name}"], "ui" | "icons">> & { ui?: { Utils?: { ${name}?: Utils["${name}"]["ui"] } }; icons?: { Utils?: { ${name}?: Utils["${name}"] extends { icons?: infer I } ? I : never } } }`
                         )
                         .join("\n   "),
                     "",

@@ -73,11 +73,11 @@
      *
      * @example <RDynamic :schema />
      */
-    import { computed, inject, onUnmounted, watch } from "vue";
+    import { computed, inject, onUnmounted, watch, type Component } from "vue";
 
     import map from "#rform/components-map";
     import type { Condition, SlotScope } from "#rform/types";
-    import type { FieldConfig, Schema } from "#rform/types/schema";
+    import type { FieldConfig, FieldType, Schema } from "#rform/types/schema";
     import { matchCondition } from "#rform/utils";
 
     import { injectFormRoot } from "../composables/formRoot";
@@ -124,7 +124,11 @@
         return current.children;
     });
 
-    const resolved = computed(() => (config.value ? map[config.value.type] : null));
+    // Anotado como `Component`: unir os tipos dos campos num condicional estoura o
+    // TS2590 — ver "Toda prop `TrInput` do topo aparece duas vezes" no `.claude/CLAUDE.md`.
+    const fields = map as unknown as Record<FieldType, Component>;
+
+    const resolved = computed(() => (config.value ? fields[config.value.type] : null));
 
     const upper = inject(upperKey, undefined);
 

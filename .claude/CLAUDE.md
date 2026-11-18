@@ -1920,6 +1920,111 @@ Generics com conditional types nas `Props` (ex.: `Multiple extends true ? T[] : 
 
 Quando o slot precisa expor um tipo conditional (`Multiple extends true ? Item[] : Item`), criar helpers em script (`fieldSlot()`, `rowSlot(option)`) que retornam `as Selected` — o template não suporta cast `as` direto em expressões.
 
+### Toda prop `TrInput` do topo aparece duas vezes
+
+`error`, `label`, `placeholder` e `description` são declaradas duas vezes no tipo.
+Quem duplica é o `TrProps<P>` (`src/runtime/type.d.ts`, exportado por
+`#rform/types`), que é `P & Readonly<P>`: o `Element` o usa no `error` e o `RFile`
+no próprio `placeholder`. O template `types/components/utils/props` faz o mesmo à
+mão, `Omit<U, …> & Readonly<Omit<U, …>>`, porque ali a duplicação é do util
+inteiro e não só das props de texto. Sem isso, todo
+`withDefaults(defineProps<Props>(), …)` de campo estoura o **TS2590** num app com
+i18n de umas 255 chaves para cima.
+
+```ts
+import type { Element, TrInput, TrProps } from "#rform/types";
+
+export type Props = Element<typeof defaults, "rating"> & TrProps<{ hint?: TrInput }>;
+```
+
+A restrição `P extends { [K in keyof P]?: TrInput }` recusa `TrProps<{ max?: number }>`.
+
+**Toda prop `TrInput` sai sem `type` de runtime, e as escritas no `type.d.ts`
+precisam de `// @vue-ignore` para isso.** O `error` (no `Element`) e o
+`placeholder` do `RFile` (no `TrProps`) saíam `type: String`, e um
+`:error="{ key, params }"` dava `Invalid prop: type check failed` em dev. Duas
+razões, as duas medidas:
+
+- **O `TrInput` inferido não era o do app.** Para resolver o `#rform/types/tr` do
+  `src/runtime/type.d.ts`, o compiler-sfc sobe a partir dele e acha o
+  `tsconfig.json` da raiz do repo, cujo `paths` aponta para o `.nuxt` da raiz — onde
+  o módulo não tem i18n e `TrInput = string`. Vale para todo app deste repo:
+  compilado fora de app nenhum, o resultado é o mesmo que o dev server do
+  `playgrounds/i18n` serve, e trocar só o `TrInput` do `.nuxt` da raiz para
+  `number` faz os dois saírem `type: Number`.
+- **O do app nunca daria `[String, Object]`.** O `inferRuntimeType` não tem caso
+  para template literal (`~~${string}`) nem para tipo condicional (`Paramless`), os
+  dois viram `UNKNOWN`, e `UNKNOWN` numa união faz a prop sair `type: null`. É o que
+  já acontecia com o `label`, o `placeholder` e o `description` dos utils, e o que o
+  consumidor do npm recebe no `error` (ver "O consumidor precisa incluir os
+  `.d.vue.ts` do pacote").
+
+O `@vue-ignore` posto na **propriedade** só tira o `type` — a prop continua
+declarada, e o `vue-component-meta` a lista igual (`TrInput | undefined`). Funciona
+dentro do argumento do `TrProps<{ … }>`. É comentário de linha, e não tag de JSDoc,
+porque o `jsdoc/check-tag-names` do oxlint recusa `@vue-ignore`; o compiler-sfc lê
+qualquer comentário que preceda a prop. Medido na declaração compilada: só o
+`error` dos 18 campos e o `placeholder` do `RFile` mudaram, das 330 props.
+
+Campo de usuário não precisa dele: ali o `TrInput` resolve pelo tsconfig do app, e
+sai `null` com i18n ou `String` sem — e sem i18n o tipo já não aceita objeto.
+
+O culpado é o `LooseRequired<T>` do Vue, por onde passa todo `defineProps`:
+
+```ts
+type LooseRequired<T> = { [P in keyof (T & Required<T>)]: T[P] };
+```
+
+O valor sai de `T[P]` e é o esperado, `TrInput | undefined`. Mas para ler as
+chaves o checker monta as propriedades de `T & Required<T>`, e uma propriedade
+presente em **exatamente dois** constituintes tem o tipo calculado na hora:
+`(TrInput | undefined) & TrInput`. O resultado é jogado fora, mas a conta é um
+produto cruzado — 319 × 318 —, e o teto do TS é 100.000. O atalho que intersecta
+união de literal sem produto cruzado (`intersectUnionsOfPrimitiveTypes`) não vale
+para o `TrInput`, porque ele tem um template literal (`~~${string}`) e objetos
+(`{ key, params }`). Medido com 2.000 literais: só literais passa; um único
+template literal ou um único objeto a mais estoura.
+
+A saída é a regra do `createUnionOrIntersectionProperty`: com **três ou mais**
+constituintes o tipo da propriedade é adiado, e ninguém o pede. Duplicar a prop
+faz `T & Required<T>` ter três. `Readonly` porque é homomórfico (preserva o `?`) e
+o compiler-sfc o resolve:
+
+- `Pick<P, keyof P>` — o compiler-sfc recusa ("Failed to resolve index type into
+  finite keys");
+- `Partial<P>` — compila, mas o compiler-sfc emite `required: false` para **toda**
+  prop, calado: o `options` do `Radio`/`Select`, o `entry` do `FileItem` e o
+  `schema` do `Dynamic` perderiam o aviso de prop obrigatória.
+
+Nada do tipo do `TrInput` resolve, porque a união é achatada de volta com o mesmo
+tamanho: `Readonly<TrInput>`, `TrInput & {}` e `TrInput | (string & {})` foram
+medidos e estouram igual — o último ainda aceita `"Nome"` sem `~~`. A declaração
+de runtime não muda: comparada antes e depois, 31 componentes e 330 props idênticas.
+
+Três limites, todos de pé:
+
+- **O tipo do componente não é coberto.** O `DefineComponent` passa as props por um
+  `Readonly<…>` — que funde as duas cópias num objeto só — e depois por outro
+  `LooseRequired`, no `setup`. Comparar um campo estruturalmente estoura:
+  `const c: Component = RText`, uma união de campos num condicional. É por isso que
+  o `Dynamic.vue` lê o `components-map` por
+  `as unknown as Record<FieldType, Component>` — uma anotação de tipo também
+  compara, e estoura do mesmo jeito.
+- **Prop de texto própria de um campo de usuário** no topo (`hint?: TrInput` num
+  `app/rform/fields/X.vue`) precisa passar pelo `TrProps`, senão o campo quebra
+  quando o app passar do limite. A herdada do `Element` e do `Utils[…]` já vem
+  coberta. Ao
+  que mora dentro de `text` nada disso se aplica: `(TextTree | undefined) & TextTree`
+  são duas combinações, e o checker não desce até as folhas.
+- **Depende de um detalhe do TS**, o adiamento a partir de três constituintes. Se
+  mudar, o TS2590 volta alto no `test:types`. O canário é o `docs`, o único app com
+  chaves de i18n o bastante (318 membros no `TrInput` hoje): diminuir o JSON dele
+  tira a guarda.
+
+**Isso não veio do Vue.** O `@vue/shared` 3.5.44 e o 3.5.45 têm `shared.d.ts`
+byte a byte iguais, e o `runtime-core.d.ts` não mexe em nenhum tipo de props entre
+os dois. Quem cruzou a linha foram as chaves: 313 membros passavam, 318 não.
+
 ### O generic do `RSelect` vai até o model
 
 O campo é genérico sobre `options` desde sempre, mas por muito tempo **nada do que

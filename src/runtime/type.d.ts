@@ -153,10 +153,11 @@ export type WithTextSource<P> = Omit<P, "text"> & { text?: TextSource };
  *
  * `disabled` é prop de todo campo, e o `RDynamic` a preenche a partir do
  * `disabledWhen` do schema — ver "Condicionais no schema" no `.claude/CLAUDE.md`.
+ *
+ * O `error` entra pelo `TrProps`, que o declara duas vezes.
  */
 export type Element<OBJ extends Base = Base, C = any, D = ConvertNeverToUnknown<OBJ["default"]>> = {
     name?: string | number;
-    error?: TrInput;
     required?: boolean;
     rule?: Rule<C>;
     loading?: boolean;
@@ -165,7 +166,19 @@ export type Element<OBJ extends Base = Base, C = any, D = ConvertNeverToUnknown<
     ui?: DeepPartialUI<OBJ["ui"]>;
     modelValue?: D;
     "onUpdate:modelValue"?: <T extends D>($event: T) => void;
-};
+} & TrProps<{
+    // @vue-ignore — sem checagem de runtime, como toda prop `TrInput`: ver o `TrProps`.
+    error?: TrInput;
+}>;
+
+/**
+ * Declara props `TrInput` do topo duas vezes. Com uma só, o `defineProps` estoura o
+ * TS2590 num app com i18n de umas 255 chaves para cima — ver "Toda prop `TrInput`
+ * do topo aparece duas vezes" no `.claude/CLAUDE.md`. O que mora em `text` não precisa.
+ *
+ * @example type Props = Element<typeof defaults, "rating"> & TrProps<{ hint?: TrInput }>;
+ */
+export type TrProps<P extends { [K in keyof P]?: TrInput }> = P & Readonly<P>;
 
 /**
  * Os tokens de autofill do WHATWG, escritos à mão. O `AutoFill` do `lib.dom` é uma

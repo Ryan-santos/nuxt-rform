@@ -115,6 +115,7 @@
         IconsProp,
         TextProp,
         TrInput,
+        TrProps,
         Uploaded,
         UploadFn
     } from "#rform/types";
@@ -197,7 +198,12 @@
         // Os da linha do `RUtilsFileItem`, herdados pelo `useUtil`.
         Utils["FileItem"] &
         IconsProp<typeof defaults.icons> &
-        TextProp<typeof defaults.text> & {
+        TextProp<typeof defaults.text> &
+        TrProps<{
+            // @vue-ignore — sem checagem de runtime: ver o `TrProps`.
+            /** No topo por contrato, como `label` — nunca dentro de `text`. */
+            placeholder?: TrInput;
+        }> & {
             /** Extensões e/ou MIME (`"png, jpg"`, `"image/*"`, `".pdf"`). Ausente = tudo. */
             accept?: string;
             /** O `& boolean` é o que faz a forma curta `<RFile multiple>` ligar. */
@@ -214,8 +220,6 @@
             maxSize?: number;
             /** Só em `multiple`. */
             maxFiles?: number;
-            /** No topo por contrato, como `label` — nunca dentro de `text`. */
-            placeholder?: TrInput;
         };
 
     // Espelho de `Props` sem generic, para o `useField`, como no Select: o tipo
