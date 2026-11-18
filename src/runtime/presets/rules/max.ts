@@ -12,11 +12,10 @@ const schema = (value: unknown, max: number) => {
         return z.number().max(max, trRule({ key: "max.number", params: { max } }));
     }
 
-    const message = trRule({ key: "max.length", params: { max } });
-
+    // Num array a contagem é de itens, não de caracteres.
     return Array.isArray(value)
-        ? z.array(z.unknown()).max(max, message)
-        : z.string().max(max, message);
+        ? z.array(z.unknown()).max(max, trRule({ key: "max.items", params: { max } }))
+        : z.string().max(max, trRule({ key: "max.length", params: { max } }));
 };
 
 /** Exige um máximo: valor, se for número; comprimento, no resto. */

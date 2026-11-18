@@ -206,8 +206,10 @@
             "novoSetor": "New department",
             "novoIntegrante": "New member",
             "integrante": "member",
-            "peloMenosDois": "At least 2 guests",
-            "convidado": "guest name"
+            "deDoisAQuatroConvidados": "2 to 4 guests",
+            "convidado": "guest name",
+            "prioridades": "Priorities, most to least important",
+            "prioridade": "priority"
         },
         "object": {
             "endereco": "Address",

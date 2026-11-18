@@ -2,8 +2,11 @@
     <RArray
         v-slot="{ index }"
         name="convidados"
-        label="demo.array.peloMenosDois"
-        :rule="{ name: 'min', min: 2 }"
+        label="demo.array.deDoisAQuatroConvidados"
+        :rule="[
+            { name: 'min', min: 2 },
+            { name: 'max', max: 4 }
+        ]"
     >
         <RText
             :name="index"

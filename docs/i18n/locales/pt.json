@@ -206,8 +206,10 @@
             "novoSetor": "Novo setor",
             "novoIntegrante": "Novo integrante",
             "integrante": "integrante",
-            "peloMenosDois": "Pelo menos 2 convidados",
-            "convidado": "nome do convidado"
+            "deDoisAQuatroConvidados": "De 2 a 4 convidados",
+            "convidado": "nome do convidado",
+            "prioridades": "Prioridades, da mais para a menos importante",
+            "prioridade": "prioridade"
         },
         "object": {
             "endereco": "Endereço",

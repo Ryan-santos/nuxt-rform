@@ -8,7 +8,10 @@ type Messages = typeof import("./pt-BR").default;
 const en: Messages = {
     fields: {
         array: {
-            add: "Add"
+            add: "Add",
+            remove: "Remove",
+            up: "Move up",
+            down: "Move down"
         },
         select: {
             search: "Search",
@@ -73,11 +76,13 @@ const en: Messages = {
             required: "Required field.",
             min: {
                 number: "Minimum value: {min}.",
-                length: "At least {min} character. | At least {min} characters."
+                length: "At least {min} character. | At least {min} characters.",
+                items: "At least {min} item. | At least {min} items."
             },
             max: {
                 number: "Maximum value: {max}.",
-                length: "At most {max} character. | At most {max} characters."
+                length: "At most {max} character. | At most {max} characters.",
+                items: "At most {max} item. | At most {max} items."
             },
             email: "Invalid e-mail.",
             url: "Invalid URL.",

@@ -241,8 +241,11 @@ describe("presets de mask", () => {
 describe("plural", () => {
     // O bug que o resolvedor à mão embarcava: `min: 1` lia "Mínimo de 1 caracteres."
     // Array vazio não é branco, então a rule não sai cedo e a mensagem é alcançável.
-    it("diz caractere no singular", () => {
-        expect(run(min, [], { min: 1 })).toBe("Mínimo de 1 caractere.");
+    it("conta itens num array, no singular e no plural", () => {
+        expect(run(min, [], { min: 1 })).toBe("Mínimo de 1 item.");
+        expect(run(min, ["a"], { min: 3 })).toBe("Mínimo de 3 itens.");
+        expect(run(max, ["a", "b"], { max: 1 })).toBe("Máximo de 1 item.");
+        expect(run(max, ["a", "b", "c"], { max: 2 })).toBe("Máximo de 2 itens.");
     });
 
     it("diz caracteres no plural", () => {

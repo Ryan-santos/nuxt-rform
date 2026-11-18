@@ -581,7 +581,7 @@ curto** (`add: "plus"`) — e intersecciona `IconsProp<typeof defaults.icons>` n
 | componente       | papéis                                                         |
 | ---------------- | -------------------------------------------------------------- |
 | `RNumber`        | `decrement`, `increment`                                       |
-| `RArray`         | `add`, `remove`                                                |
+| `RArray`         | `add`, `remove`, `up`, `down`, `drag`                          |
 | `RCheckbox`      | `check`                                                        |
 | `RDate`          | `calendar`                                                     |
 | `RSelect`        | `clear`, `toggle`, `search`, `loading`, `failed`               |
@@ -711,6 +711,105 @@ mesma string. E `test/unit/prefixDefaults.test.ts` cobre a regra do `:` e do `""
 O `v-for` do `RArray` itera `length` e passa cada item por um componente de linha, em vez de `v-for="(item, index) in model"`. Aquela forma lia **todo** elemento no render _deste_ componente, então uma tecla — uma escrita em `array[i]` — invalidava a lista inteira e repatchava todo irmão: 0,6 ms com 10 linhas e 4,1 ms com 100, crescendo com a lista onde um form plano ficava plano.
 
 Iterar `length` e passar `item` por um getter **não basta sozinho**: o `v-bind` num `<slot>` normaliza o objeto e lê o getter do mesmo jeito. Só a fronteira de componente escopa a dependência de verdade.
+
+#### A linha é presa ao índice, e só o nome da transição segue o item
+
+O `:key` do `v-for` continua sendo o índice, **de propósito**. O `id` de todo filho
+é uma string montada uma vez no setup do `useField`, e é por ele que o `rulesList`, o
+`pendingList` e o `errorsBag` são chaveados. Uma chave estável faria a instância de
+`itens.2` passar a morar no índice 1 com o `id` antigo, e a rule dela validaria o
+item errado. Tornar o `id` reativo é mexer na árvore inteira.
+
+Então quem segue o item é outra coisa: um array de identidades paralelo ao model
+(`keys`), que só existe para dar o `view-transition-name` de cada `<li>`. A View
+Transitions API casa os elementos **pelo nome**, não pelo nó do DOM, então remover
+o item 1 anima a saída dele e a subida dos de baixo, mesmo com as instâncias paradas
+e os valores trocando de linha. Mudança vinda de fora só acerta o tamanho do `keys`
+— um desalinhamento ali custa uma animação menos fiel, nunca um dado errado.
+
+- **O nome só existe durante a transição** (`naming`), e entra no DOM antes do
+  `startViewTransition`, que tira o snapshot antigo na hora da chamada. Sempre
+  ligado, ele entraria também numa transição de rota do app. Todo elemento leva
+  `view-transition-class: rform-array`, que é o endereço de estilo do app.
+- **Sem a API, ou com `prefers-reduced-motion`, a mudança é aplicada direto.** O
+  happy-dom não tem a API, então os testes passam pelo caminho síncrono.
+- O `ready` de uma transição pulada (outra começou por cima) rejeita: tem `catch`,
+  senão é unhandled rejection a cada clique rápido. O `token` impede a transição
+  velha de desligar os nomes da nova.
+- **O erro tem de ser renumerado à mão.** Com a linha presa ao índice, o
+  `errorsBag["itens.2"]` continuaria no índice 2 depois de remover o 1 — e
+  apontaria para outro item. `remapIndexKeys` (`#rform/utils`, puro) reescreve as
+  chaves sob `<id>.<índice>` a cada remover/mover. O `rulesList` e o `pendingList`
+  não precisam: as instâncias não mudaram de índice, e a do fim desmonta e se limpa.
+- **Limite conhecido:** estado local de um filho (a fila de upload em voo de um
+  `RFile`, o painel aberto de um `RSelect`) fica no índice e não segue o item.
+- A mutação continua sendo **no próprio array** (`splice`/`push`): é o contrato de
+  "a mutação reflete no Form", e um array novo não chegaria ao `modelValue` de quem
+  passou o array sem `v-model`.
+
+`sortable` é `boolean | "arrows" | "drag"`, no molde do `closeOnSelect` do `RSelect`:
+`true` liga as setas (teclado) **e** a alça de arrastar, o nome de uma liga só ela. Mora
+no `defaults` (`false`) e entra no `withDefaults` como `undefined`. A união compila
+para `type: [Boolean, String]`, nessa ordem, e é ela que faz o `<RArray sortable>`
+sem valor chegar `true` — `Array.test.ts` asserta a declaração de runtime.
+
+#### `min`/`max` saem da `rule` quando a prop falta
+
+Os limites dos botões (lixeira e "Adicionar") leem `props.min ?? ruleLimits(rule).min`,
+e o mesmo para `max`. Escrever `:rule="{ name: 'min', min: 2 }"` já esconde a lixeira
+em 2 itens, sem repetir o número numa prop. A direção é só essa: a prop **não** vira
+validação. A prop escrita vence, inclusive `:min="0"` (por isso `??`).
+
+`ruleLimits` (`#rform/utils`, puro) lê o preset por referência, o JSON Schema cru do
+preset `schema` (`minItems`/`maxItems` — o zod dele só nasce ao validar) **e** o
+schema zod —
+`min_length`, `max_length` e `length_equals` em `_zod.def.checks`, atravessando
+`optional`/`default`/`nullable`/`catch`/`readonly` (`innerType`) e `pipe` (`in`, que
+é o `.transform()`). Num array de rules vale o mais apertado. Ele reconhece zod pela
+forma do `_zod`, **sem importar zod**, senão arrastaria zod para o caminho crítico de
+todo `RArray`. Rule em forma de função não tem o que ler, e o `:rules` agregado do
+`RForm` não chega ao campo. No modo schema não há nada a fazer: o `RDynamic` entrega
+a `rule` (e o `min`/`max`) da config pelo `rest`, e o "vindo de schema" de
+`Array.test.ts` prova os três formatos de ponta a ponta.
+
+#### O `min` semeia as linhas
+
+A lista nunca fica abaixo do `min` (o da prop ou o que o `ruleLimits` tira da
+`rule`): um `watch([length, min])` com `immediate` completa com `undefined`, como o
+"Adicionar" faz, e cada filho semeia o próprio default. Vale na montagem, num reset
+e num model que chega curto de fora. É **invariante, e não só estado inicial**: a
+lixeira já não deixa a lista descer abaixo do `min`, e um model que chegasse curto
+renderizaria uma lista que o usuário não conseguiria alcançar pela UI.
+
+A mensagem do preset `min`/`max` conta **itens** num array (`min.items`/`max.items`
+no pack), e caracteres no resto. Antes, um array caía em `min.length`, e o demo de
+`rule` dizia "Mínimo de 2 caracteres." para uma lista vazia.
+
+#### O arrastar (`composables/useDragSort.ts`)
+
+Pointer Events, com base no `useDragDrop` do atendas — o DnD nativo do HTML5 não
+dispara em tela de toque. Três desvios da base, e cada um tem motivo:
+
+- **A alça tem `touch-action: none`**, então o toque começa o arraste na hora, sem o
+  hold de 250 ms que a base usa para devolver o gesto ao scroll. Num grip dedicado
+  não há scroll a preservar.
+- **O destino sai da geometria das linhas**, não de `elementsFromPoint`: o ponto de
+  inserção é quantas linhas têm o meio acima do ponteiro. Não há registro global de
+  alvos, e o arraste não vaza para outro `RArray`, nem para um aninhado. O
+  `setPointerCapture` na alça manda todo `pointermove` para ela.
+- **O fantasma copia o `value` dos controles**: o `:value` é propriedade, não
+  atributo, e um `cloneNode` sairia com todo input vazio. Os `id` do clone saem.
+
+`dropAt` é `null` quando soltar ali não muda nada (antes ou logo depois da própria
+linha), e é o que liga o `dropBefore`/`dropAfter` do `ui`. O `click` que segue o
+`pointerup` é engolido, e o `Escape` cancela. O soltar chama o mesmo `reorder` das
+setas, então a animação e a renumeração do bag são as mesmas.
+
+O happy-dom não tem layout: `test/nuxt/Array.test.ts` finge o `getBoundingClientRect`
+de cada linha. O remover é `<button>` (era um `<Icon @click>`, fora do
+Tab e surdo ao `disabled`), e todo botão da linha leva `data-action` — é por ele que
+o foco volta ao botão de mover depois de a linha trocar de lugar, e é o seletor
+estável dos testes.
 
 ### O campo `File`: dois modos, e a fila mora fora do model
 

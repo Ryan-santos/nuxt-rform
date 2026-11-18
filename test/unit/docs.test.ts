@@ -223,6 +223,18 @@ describe("i18n do site", () => {
 
         expect(await pack("en")).toEqual(await pack("pt"));
     });
+
+    // O `JSON.parse` engole a chave repetida e fica com a última: um demo passava a
+    // mostrar o texto do outro, calado. Toda chave escrita tem de sobreviver ao parse.
+    it.each(["pt", "en"])("o pack %s não repete chave", async (code) => {
+        const text = await readFile(join(root, `docs/i18n/locales/${code}.json`), "utf8");
+        const count = (value: unknown): number =>
+            value && typeof value === "object"
+                ? Object.values(value).reduce((sum: number, child) => sum + 1 + count(child), 0)
+                : 0;
+
+        expect(count(JSON.parse(text))).toBe(text.match(/"(?:[^"\\]|\\.)*"\s*:/g)?.length);
+    });
 });
 
 describe("realce", () => {

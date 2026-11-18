@@ -9,7 +9,10 @@
 export default {
     fields: {
         array: {
-            add: "Adicionar"
+            add: "Adicionar",
+            remove: "Remover",
+            up: "Mover para cima",
+            down: "Mover para baixo"
         },
         select: {
             search: "Pesquisar",
@@ -76,11 +79,13 @@ export default {
             required: "Campo obrigatório.",
             min: {
                 number: "Valor mínimo: {min}.",
-                length: "Mínimo de {min} caractere. | Mínimo de {min} caracteres."
+                length: "Mínimo de {min} caractere. | Mínimo de {min} caracteres.",
+                items: "Mínimo de {min} item. | Mínimo de {min} itens."
             },
             max: {
                 number: "Valor máximo: {max}.",
-                length: "Máximo de {max} caractere. | Máximo de {max} caracteres."
+                length: "Máximo de {max} caractere. | Máximo de {max} caracteres.",
+                items: "Máximo de {max} item. | Máximo de {max} itens."
             },
             email: "E-mail inválido.",
             url: "URL inválida.",

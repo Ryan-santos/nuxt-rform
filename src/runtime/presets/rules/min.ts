@@ -12,11 +12,10 @@ const schema = (value: unknown, min: number) => {
         return z.number().min(min, trRule({ key: "min.number", params: { min } }));
     }
 
-    const message = trRule({ key: "min.length", params: { min } });
-
+    // Num array a contagem é de itens, não de caracteres.
     return Array.isArray(value)
-        ? z.array(z.unknown()).min(min, message)
-        : z.string().min(min, message);
+        ? z.array(z.unknown()).min(min, trRule({ key: "min.items", params: { min } }))
+        : z.string().min(min, trRule({ key: "min.length", params: { min } }));
 };
 
 /** Exige um mínimo: valor, se for número; comprimento, no resto. */
