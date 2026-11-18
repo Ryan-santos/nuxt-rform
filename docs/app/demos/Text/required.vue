@@ -7,7 +7,12 @@
     <RText
         name="requiredRule"
         label="demo.text.asteriscoValidado"
-        required
         rule="required"
+    />
+    <RText
+        name="semAsterisco"
+        label="demo.text.validadoSemAsterisco"
+        rule="required"
+        :required="false"
     />
 </template>

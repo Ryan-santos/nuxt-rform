@@ -62,6 +62,7 @@
             "semNamePlaceholder": "never reaches the model",
             "asterisco": "With an asterisk",
             "asteriscoValidado": "With an asterisk and validation",
+            "validadoSemAsterisco": "With validation, no asterisk",
             "comDefault": "With a default",
             "limite": "Limit of 20",
             "limitePlaceholder": "count the characters",

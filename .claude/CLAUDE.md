@@ -141,6 +141,37 @@ reescrita, incluindo o arquivo sem `defaults` e o `defaults` escrito à mão;
 `test/nuxt/formRef.test.ts` asserta `asyncDep === null` no `RForm` **e** no campo
 dentro dele, além da API exposta.
 
+#### O `required` sai da `rule`
+
+A prop `required` só desenha o asterisco (`RUtilsLabel`, e o `RUtilsPlaceholder`
+sem label). Nenhum input recebe `required` nativo e nada valida por ela. Quando o
+call site não a escreve, o `computed` de `props` a deriva da `rule` com
+`hasRequiredRule` (`#rform/utils`, puro): `merged.required ??= …`, depois do
+`merger`.
+
+- **O `??=` é o que dá as três saídas**, e funciona porque o `merger` só pula
+  `undefined` e todo campo passa `required: undefined` no `withDefaults`.
+  `:required="false"` na tag vence, `defineFieldDefaults({ Text: { required: false } })`
+  desliga para o tipo inteiro, e `required` na tag religa por cima do app.
+- **Só o preset `required`**: `"required"`, `{ name: "required" }` ou dentro de um
+  array. Função, schema zod, o preset `schema` e o `:rules` agregado do `RForm` (que
+  não chega ao campo) ficam de fora, porque nenhum diz "obrigatório" de um jeito
+  legível. O `ruleLimits` lê zod pelo `_zod`, mas aqui não há sinal confiável: a
+  ausência de `optional` não quer dizer obrigatório. Decisão explícita.
+- **Lê o `rule` mesclado**, então o modo schema (`rule` vindo do `rest` do
+  `RDynamic`) e um `rule` padronizado no `defineFieldDefaults` acendem também.
+- **Campo de usuário sem `required: undefined` no `withDefaults` não deriva**: o
+  boolean casting entrega `false` e o `??=` não tem o que fazer.
+  `test/nuxt/booleanProps.test.ts` só varre os campos do módulo.
+- **O cast estreito (`marks`) é obrigatório.** Fazer o `??=` direto no
+  `FieldProps<T>` estoura o TS2590 no `withDefaults` de todos os campos, e o erro
+  aparece nos `.vue`, não no `useField`.
+
+As guardas: `test/unit/hasRequiredRule.test.ts` (as formas aceitas e as recusadas),
+`test/nuxt/requiredFromRule.test.ts` (as três formas, a tag vencendo, a `rule`
+reativa e o modo schema) e `test/nuxt/requiredFromRuleDefaults.test.ts` (o `false`
+do app, num arquivo próprio porque o `vi.mock` vale para o arquivo inteiro).
+
 ### O `errorsBag`: um escritor só para o `error` (`src/runtime/composables/errorsBag.ts`)
 
 O Form provê cinco coisas, e as direções não são as mesmas:

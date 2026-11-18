@@ -62,6 +62,7 @@
             "semNamePlaceholder": "não vai pro model",
             "asterisco": "Com asterisco",
             "asteriscoValidado": "Com asterisco e validação",
+            "validadoSemAsterisco": "Com validação, sem asterisco",
             "comDefault": "Com default",
             "limite": "Limite de 20",
             "limitePlaceholder": "conte os caracteres",

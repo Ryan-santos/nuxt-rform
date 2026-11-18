@@ -20,6 +20,7 @@ import { components as registry, hooks } from "#rform/registry";
 import type { Element, ResolvedUI } from "#rform/types";
 import type Components from "#rform/types/components";
 import {
+    hasRequiredRule,
     hookUi,
     merger,
     prefixDefaults,
@@ -150,6 +151,12 @@ export default function useField<T extends Element, S = T["modelValue"], G = T["
         // A tradução acontece aqui, na fronteira do call site: um segundo `tr` sobre a
         // mensagem do bag a levaria ao `t` do app e cairia no aviso de *missing key*.
         merged.error = sourceProps.error ? tr(sourceProps.error) : error.value;
+
+        // Só quando ninguém escreveu: `false` na tag ou no `defineFieldDefaults` vence.
+        // Por um tipo estreito: pelo `FieldProps<T>` a linha estoura o TS2590 em todo
+        // campo.
+        const marks = merged as { required?: boolean; rule?: unknown };
+        marks.required ??= hasRequiredRule(marks.rule);
 
         merged.ui = hookUi(merged.ui, hook) as typeof merged.ui;
 
