@@ -1,6 +1,56 @@
 # Changelog
 
 
+## v0.4.0
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.6...v0.4.0)
+
+### 🚀 Enhancements
+
+- Rule por JSON Schema (preset schema) ([225cd6e](https://github.com/Ryan-santos/nuxt-rform/commit/225cd6e))
+- Adicionando closeOnSelect no RSelect ([d8e14b7](https://github.com/Ryan-santos/nuxt-rform/commit/d8e14b7))
+- Oficializando null no ui ([7b78e14](https://github.com/Ryan-santos/nuxt-rform/commit/7b78e14))
+- Adicionando a rule regex ([2767f99](https://github.com/Ryan-santos/nuxt-rform/commit/2767f99))
+- Criando o campo RRadio ([65b8577](https://github.com/Ryan-santos/nuxt-rform/commit/65b8577))
+- Criando o campo RCheckbox ([94ce04b](https://github.com/Ryan-santos/nuxt-rform/commit/94ce04b))
+- Criando o campo RPassword ([2cd89d6](https://github.com/Ryan-santos/nuxt-rform/commit/2cd89d6))
+- Adicionando a prop icons aos campos e utils ([3339ca4](https://github.com/Ryan-santos/nuxt-rform/commit/3339ca4))
+- Reordenando e animando o RArray ([1ae9db8](https://github.com/Ryan-santos/nuxt-rform/commit/1ae9db8))
+- Ligando o required pelo preset ([2be4cad](https://github.com/Ryan-santos/nuxt-rform/commit/2be4cad))
+
+### 🩹 Fixes
+
+- Rule schema lança com o campo vazio e aceita JSON readonly ([ac35a9c](https://github.com/Ryan-santos/nuxt-rform/commit/ac35a9c))
+- Tipando o galho de todo util que o campo renderiza ([2534ce7](https://github.com/Ryan-santos/nuxt-rform/commit/2534ce7))
+- Corrigindo o TS2590 com muitas chaves ([8dfba95](https://github.com/Ryan-santos/nuxt-rform/commit/8dfba95))
+
+### 💅 Refactors
+
+- Movendo os tipos de opção ([7dc0a96](https://github.com/Ryan-santos/nuxt-rform/commit/7dc0a96))
+
+### 📖 Documentation
+
+- Rule por JSON Schema ([64f462e](https://github.com/Ryan-santos/nuxt-rform/commit/64f462e))
+- Adicionando a spec dos novos campos ([5794437](https://github.com/Ryan-santos/nuxt-rform/commit/5794437))
+- Criando a página de ícones ([f1e2205](https://github.com/Ryan-santos/nuxt-rform/commit/f1e2205))
+- Documentando a prop icons em cada campo ([4cb664e](https://github.com/Ryan-santos/nuxt-rform/commit/4cb664e))
+
+### 📦 Build
+
+- Atualizando as dependências ([08c7d6a](https://github.com/Ryan-santos/nuxt-rform/commit/08c7d6a))
+
+### ✅ Tests
+
+- Rule schema no campo, no agregado e no tipo ([778d425](https://github.com/Ryan-santos/nuxt-rform/commit/778d425))
+
+### 🎨 Styles
+
+- Formatando arquivos com o oxfmt ([143a8ba](https://github.com/Ryan-santos/nuxt-rform/commit/143a8ba))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.3.6
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.5...v0.3.6)
