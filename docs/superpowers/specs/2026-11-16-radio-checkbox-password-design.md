@@ -109,12 +109,12 @@ Base: o `Password.vue` do atendas (mesmo `ui` do `RText`, `Placeholder` de uma l
 
 Props novas (fora do `defaults` quando o "não apaga" do `merger` morderia):
 
-| prop | tipo | notas |
-|---|---|---|
-| `checklist` | `{ label: TrInput; rule: RuleRef }[]` | liga a lista |
-| `strength` | `boolean` | barra de força; exige `checklist` (sem ela, `console.warn` e não renderiza) |
-| `generate` | `boolean \| { length?: number; symbols?: string }` | `@generate` liga sozinho, como no atendas |
-| `onGenerate` | `(password: string) => void` | |
+| prop         | tipo                                               | notas                                                                       |
+| ------------ | -------------------------------------------------- | --------------------------------------------------------------------------- |
+| `checklist`  | `{ label: TrInput; rule: RuleRef }[]`              | liga a lista                                                                |
+| `strength`   | `boolean`                                          | barra de força; exige `checklist` (sem ela, `console.warn` e não renderiza) |
+| `generate`   | `boolean \| { length?: number; symbols?: string }` | `@generate` liga sozinho, como no atendas                                   |
+| `onGenerate` | `(password: string) => void`                       |                                                                             |
 
 `generate`, `strength` e `checklist` entram no `withDefaults` como `undefined`
 (boolean casting).
