@@ -199,12 +199,6 @@ describe("regex", () => {
         expect(run(regex, "ABC", { pattern: "[a-z]", flags: "i" })).toBeUndefined();
     });
 
-    it("troca a mensagem por message, crua", () => {
-        expect(run(regex, "ABC", { pattern: "[a-z]", message: "Uma minúscula." })).toBe(
-            "Uma minúscula."
-        );
-    });
-
     it("aceita RegExp", () => {
         expect(run(regex, "123", { pattern: /^\d+$/ })).toBeUndefined();
         expect(run(regex, "12a", { pattern: /^\d+$/ })).toBeTypeOf("string");

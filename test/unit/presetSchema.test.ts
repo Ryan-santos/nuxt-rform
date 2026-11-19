@@ -41,16 +41,6 @@ describe("preset schema", () => {
         }
     });
 
-    it("troca qualquer issue pelo message", () => {
-        const args = {
-            schema: { type: "string", pattern: "^PED-" },
-            message: "Formato PED-000000."
-        };
-
-        expect(run("x", args)).toBe("Formato PED-000000.");
-        expect(run("PED-1", args)).toBeUndefined();
-    });
-
     it("aceita schema booleano", () => {
         expect(run("x", { schema: false })).toBeTypeOf("string");
         expect(run("x", { schema: true })).toBeUndefined();

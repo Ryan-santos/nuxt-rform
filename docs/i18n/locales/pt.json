@@ -261,7 +261,8 @@
             "erro": "Essa senha já foi usada antes."
         },
         "presets": {
-            "uf": "Use a sigla da UF, em maiúsculas: SP, RJ, BA."
+            "uf": "Use a sigla da UF, em maiúsculas: SP, RJ, BA.",
+            "motivo": "Escreva o motivo."
         },
         "form": {
             "nascimento": "Nascimento",

@@ -7,6 +7,6 @@
     <RText
         name="uf"
         label="~~{ name: 'regex', pattern: '^[A-Z]{2}$', message }"
-        :rule="{ name: 'regex', pattern: '^[A-Z]{2}$', message: $t('demo.presets.uf') }"
+        :rule="{ name: 'regex', pattern: '^[A-Z]{2}$', message: 'demo.presets.uf' }"
     />
 </template>

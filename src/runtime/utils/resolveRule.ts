@@ -1,3 +1,6 @@
+import { tr } from "#rform/translate";
+
+import type { TrValue } from "./i18n";
 import { isZodType, zodToFn } from "./zod";
 
 /**
@@ -67,20 +70,29 @@ const single = (ref: RuleRef, rules: Rules, field: string | undefined): Resolved
     }
 
     if (typeof ref === "object" && "name" in ref && typeof ref.name === "string") {
-        const { name, ...args } = ref as { name: string } & RuleArgs;
+        // `message` é do módulo, como o `name`: não chega à validation.
+        const { name, message, ...args } = ref as { name: string; message?: TrValue } & RuleArgs;
+        const validate = fromPreset(name, args, rules, field);
 
-        return fromPreset(name, args, rules, field);
+        if (message === undefined || message === null) {
+            return validate;
+        }
+
+        // Traduzido na falha, não na resolução: o locale pode ter mudado no meio.
+        return async (value, form) => ((await validate(value, form)) ? tr(message) : undefined);
     }
 
     throw new Error(`[rform] cannot resolve rule: ${typeof ref}`);
 };
 
 /**
- * Normaliza toda forma aceita em `rule` — nome de preset, `{ name, ...args }`,
+ * Normaliza toda forma aceita em `rule` — nome de preset, `{ name, message?, ...args }`,
  * função, schema zod ou um array deles — num validador async só. O preset é
  * procurado na hora, para um typo falhar alto em vez de pular a validação calado.
+ * `message` é `TrInput` e troca a mensagem do preset quando ele falha.
  *
  * @example resolveRule(["required", { name: "min", min: 3 }], rules, "text")
+ * @example resolveRule({ name: "required", message: "form.motivo" }, rules)
  */
 export default function resolveRule(
     ref: RuleRef | readonly RuleRef[] | null | undefined,

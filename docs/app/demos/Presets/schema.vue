@@ -16,7 +16,7 @@
     const pedido = {
         name: "schema",
         schema: { type: "string", pattern: "^PED-[0-9]{6}$" },
-        message: "PED-000000"
+        message: "~~PED-000000"
     } as const;
 
     const quantidade = {

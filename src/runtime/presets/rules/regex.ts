@@ -31,19 +31,17 @@ const compile = (pattern: string | RegExp, flags?: string): RegExp => {
 };
 
 /**
- * Exige que o valor case com `pattern`. `flags` sobrepõe as de um `RegExp`;
- * `message` troca a mensagem e volta crua, como no preset `schema`.
+ * Exige que o valor case com `pattern`. `flags` sobrepõe as de um `RegExp`.
  *
- * @example { name: "regex", pattern: "[A-Z]", message: "Uma letra maiúscula." }
+ * @example { name: "regex", pattern: "[A-Z]", message: "form.maiuscula" }
  * @example { name: "regex", pattern: "^PED-\\d+$", flags: "i" }
  */
 export default defineRule({
     validation: ({
         value,
         pattern,
-        flags,
-        message
-    }: RuleContext<{ pattern: string | RegExp; flags?: string; message?: string }>) => {
+        flags
+    }: RuleContext<{ pattern: string | RegExp; flags?: string }>) => {
         // Compila antes do `isBlank`: um padrão quebrado lança já com o campo vazio.
         const compiled = compile(pattern, flags);
 
@@ -51,6 +49,6 @@ export default defineRule({
             return undefined;
         }
 
-        return compiled.test(text(value)) ? undefined : (message ?? trRule("regex"));
+        return compiled.test(text(value)) ? undefined : trRule("regex");
     }
 });

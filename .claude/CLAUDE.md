@@ -1016,6 +1016,17 @@ Os args são **nomeados no próprio ref**, não posicionais: `{ name: "min", min
 
 `fromPreset` monta o contexto como `{ ...args, value, form }` — nessa ordem de propósito, para um arg chamado `value` ou `form` não conseguir sombrear o que o campo realmente tem.
 
+#### O `message` do ref é do módulo, como o `name` (issue #14)
+
+`{ name: "required", message: "form.erros.motivo" }` troca a mensagem do preset quando ele falha, em **qualquer** preset. Quem o lê é o `single` do `resolveRule`, que o tira dos args junto com o `name` — a `validation` nunca o vê — e embrulha o validador: falhou, devolve `tr(message)`.
+
+- **É `TrInput`**, como `label` e `error`, e é traduzido **na falha**, não na resolução: o locale pode ter mudado desde o mount. O tipo sai do template `types/presets.d.ts`, que importa o `TrInput` de `./tr` e intersecciona `{ message?: TrInput }` nas duas formas de objeto do `RuleRef`; o `Args<K>` omite `message` para um preset de usuário que o declare não colidir.
+- **Já foi arg de dois presets**, `regex` e `schema`, cada um com o seu e os dois **crus** (`string`, nunca traduzidos — o do `schema` com o argumento de "texto final vindo do back"). Saiu dos dois: a semântica é a mesma (troca a mensagem quando falha), e manter um `message` cru ao lado do genérico seria a única prop de texto do módulo fora do `TrInput`. Com ponte, um texto final do back passa a chegar como `~~texto`; sem ponte nada mudou, porque o `tr` é a identidade para o que não começa com `rform.`.
+- **`resolveRule` importa `#rform/translate`**, e é isso que o põe no fim do barrel: o `importsRformValue` o marca como reentrante. Importar `./tr` em vez disso faria o ciclo do `defineLocale` depender da ordem alfabética do `readdir` — ver "O `import` vem pareado com o próprio `export *`".
+- Função e schema zod ficam de fora: os dois já dizem a própria mensagem.
+
+A guarda é `test/unit/resolveRule.test.ts` (`describe("message")`) e `test/fixtures/basic/components/RuleMessageTypes.vue`.
+
 #### As rules embutidas são zod
 
 Cada uma é uma **fábrica sem parâmetro** — `const schema = () => z.custom(…, trRule("required"))` — e passa por `check(schema(), value)` (`presets/helpers.ts`), que devolve `issues[0].message`. É isso que torna a mensagem do preset a mensagem do campo. Fábrica, e não constante de escopo de módulo, porque `trRule` é resolvido **na construção do schema**: a mensagem tem de ser a do locale ativo, e o locale muda sem a página recarregar. Consequência de empacotamento: `#rform/presets.ts` importa **todos** os presets estaticamente, e todo campo importa `#rform/presets` — então **zod deixou de ser peer dependency opcional**, é obrigatória.
@@ -1026,12 +1037,12 @@ Preset em `useRForm(schema)` passa intacto por `normalizeSchema` (quem resolve �
 
 #### O preset `schema`: JSON Schema vindo do back (issue #12)
 
-`{ name: "schema", schema, message? }` converte o JSON Schema com `z.fromJSONSchema`. É **preset**, e não uma forma nova de `rule`, porque assim herda de graça a resolução, a tipagem de args do `types/presets.d.ts` e o caminho do `rules` agregado — e mora no chunk dinâmico de `#rform/presets`, onde o zod já está.
+`{ name: "schema", schema }` converte o JSON Schema com `z.fromJSONSchema`. É **preset**, e não uma forma nova de `rule`, porque assim herda de graça a resolução, a tipagem de args do `types/presets.d.ts` e o caminho do `rules` agregado — e mora no chunk dinâmico de `#rform/presets`, onde o zod já está.
 
 - `presets/rules/schema.ts` é o **único** ponto que chama o `fromJSONSchema`, que o zod marca como semi-experimental. Foi por ele que o peer subiu para `^4.2.0`, a primeira versão que o tem.
 - A conversão é cacheada num `WeakMap` pela identidade do objeto. Schema booleano (`true`/`false`, que é JSON Schema válido) não cabe ali e converte toda vez.
 - Vazio sai cedo por `isBlank`, como as rules de formato: sem isso o `fromJSONSchema` reprova `undefined`/`null` com `invalid_type`, e todo campo vazio teria dois donos.
-- Mensagens são as do zod. `message` troca qualquer issue e volta **crua** — é texto final vindo do back, como o `setErrors`, e por isso é `string` e não `TrInput`.
+- Mensagens são as do zod. O `message` genérico do ref troca qualquer issue (ver "O `message` do ref é do módulo"); ele já foi um arg cru deste preset.
 - O que o zod não converte (`$ref` externo, `if/then/else`, `type` desconhecido) **lança** com `[rform]` e a mensagem dele, dentro do `fn`: o form renderiza, o `validate()` rejeita. É a linha do preset inexistente. `format` desconhecido o zod ignora calado.
 - `test/unit/presetSchema.test.ts` mede o cache com um `vi.mock("zod")` que delega ao real — mora em arquivo próprio porque o mock é do arquivo inteiro. O guarda de tipo é `test/fixtures/basic/components/RuleSchemaTypes.vue`.
 - JSON Schema do **objeto inteiro** (o `required: [...]` no nível do objeto, item 2 da issue) ficou de fora.
@@ -1207,7 +1218,7 @@ trRule({ key: "min.number", params: { min } });
 
 Por tabela, nada disso existe: `resolveRule` não tem parâmetro de tradutor, `BaseContext` é `{ value, form }`, `fromPreset` não injeta nada além dos args, e `useField` não repassa tradutor nenhum para a validação. `RuleContext<T>` é `{ value, form } & T`.
 
-**A rota sem build é o alias.** `resolveRule` não importa mais nada de tradução; quem precisa é a rule, e ela chega no motor por `#rform/translate` — que o `vitest.config.ts` aliasa para `runtime/translate/standalone.ts` no projeto `unit`. É a propriedade que o antigo `defaultT` carregava e que não pode se perder: `test/unit/presetsBuiltin.test.ts` continua chamando `preset.validation({ value })` **direto**, sem app, sem build e com a mensagem em pt-BR. `useRForm`, que agrega as rules num `z.any().superRefine`, é a mesma rota.
+**A rota sem build é o alias.** `resolveRule` só traduz o `message` do ref, nunca a mensagem de um preset; quem precisa é a rule, e ela chega no motor por `#rform/translate` — que o `vitest.config.ts` aliasa para `runtime/translate/standalone.ts` no projeto `unit`. É a propriedade que o antigo `defaultT` carregava e que não pode se perder: `test/unit/presetsBuiltin.test.ts` continua chamando `preset.validation({ value })` **direto**, sem app, sem build e com a mensagem em pt-BR. `useRForm`, que agrega as rules num `z.any().superRefine`, é a mesma rota.
 
 #### A forma do pack
 

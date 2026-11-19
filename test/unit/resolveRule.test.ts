@@ -134,6 +134,63 @@ describe("resolveRule", () => {
         expect(seen).toEqual({ value: "ana", form: {} });
     });
 
+    describe("message", () => {
+        it("troca a mensagem do preset quando ele falha", async () => {
+            const rule = resolveRule({ name: "required", message: "Escreva o motivo." }, rules)!;
+
+            expect(await rule("", {})).toBe("Escreva o motivo.");
+            expect(await rule("ana", {})).toBeUndefined();
+        });
+
+        it("passa pelo tr, como label e error", async () => {
+            const rule = resolveRule(
+                { name: "required", message: "rform.presets.rules.required" },
+                rules
+            )!;
+
+            expect(await rule("", {})).toBe("Campo obrigatório.");
+        });
+
+        it("aceita a forma { key, params }", async () => {
+            const rule = resolveRule(
+                {
+                    name: "min",
+                    min: 3,
+                    message: { key: "rform.presets.rules.min.length", params: { min: 3 } }
+                },
+                rules
+            )!;
+
+            expect(await rule("ab", {})).toBe("Mínimo de 3 caracteres.");
+        });
+
+        it("é reservado: não chega à validation", async () => {
+            const seen: unknown[] = [];
+            const spy = {
+                spy: {
+                    validation: (context: unknown) => {
+                        seen.push(context);
+                        return undefined;
+                    }
+                }
+            };
+
+            await resolveRule({ name: "spy", message: "x", extra: 1 }, spy)!("ana", {});
+
+            expect(seen).toEqual([{ extra: 1, value: "ana", form: {} }]);
+        });
+
+        it("vale só para o item do array onde foi escrito", async () => {
+            const rule = resolveRule(
+                ["required", { name: "min", min: 3, message: "Curto." }],
+                rules
+            )!;
+
+            expect(await rule("", {})).toBe("obrigatório");
+            expect(await rule("ab", {})).toBe("Curto.");
+        });
+    });
+
     it("lança nomeando o preset desconhecido", () => {
         expect(() => resolveRule("naoExiste", rules)).toThrowError(/naoExiste/);
     });

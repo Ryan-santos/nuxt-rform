@@ -39,12 +39,12 @@ const toZod = (schema: Source): ZodType => {
 
 /**
  * Valida contra um JSON Schema, convertido para zod. Experimental: segue o
- * `fromJSONSchema` do zod. Mensagens são as do zod; `message` troca todas.
+ * `fromJSONSchema` do zod. Mensagens são as do zod; o `message` do ref troca todas.
  *
- * @example { name: "schema", schema: { type: "string", pattern: "^PED-" }, message: "Formato PED-000000." }
+ * @example { name: "schema", schema: { type: "string", pattern: "^PED-" }, message: "form.pedido" }
  */
 export default defineRule({
-    validation: ({ value, schema, message }: RuleContext<{ schema: Source; message?: string }>) => {
+    validation: ({ value, schema }: RuleContext<{ schema: Source }>) => {
         // Converte antes do `isBlank`: um schema quebrado lança já com o campo vazio.
         const zod = toZod(schema);
 
@@ -54,6 +54,6 @@ export default defineRule({
 
         const error = check(zod, value);
 
-        return error === undefined ? undefined : (message ?? error);
+        return error;
     }
 });

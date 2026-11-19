@@ -261,7 +261,8 @@
             "erro": "That password has been used before."
         },
         "presets": {
-            "uf": "Use the two-letter state code, in capitals: SP, RJ, BA."
+            "uf": "Use the two-letter state code, in capitals: SP, RJ, BA.",
+            "motivo": "Write the reason."
         },
         "form": {
             "nascimento": "Birth date",
