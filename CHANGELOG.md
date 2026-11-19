@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.5.0
+
+[compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.4.0...v0.5.0)
+
+### 🚀 Enhancements
+
+- Customizando a mensagem da rule ([0710da4](https://github.com/Ryan-santos/nuxt-rform/commit/0710da4))
+
+### 🏡 Chore
+
+- Permitindo Closes #N no commit ([27e7f61](https://github.com/Ryan-santos/nuxt-rform/commit/27e7f61))
+
+### ❤️ Contributors
+
+- Ryan Santos <ryandossantosfelix22@gmail.com>
+
 ## v0.4.0
 
 [compare changes](https://github.com/Ryan-santos/nuxt-rform/compare/v0.3.6...v0.4.0)
