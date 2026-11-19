@@ -15,7 +15,7 @@ Execute **imediatamente** quando invocado — sem perguntar se pode começar.
 2. Analise as mudanças e determine o(s) tipo(s) da tabela abaixo.
 3. Monte **3 sugestões** de mensagem (variações úteis: níveis de detalhe ou tipos alternativos quando ambíguo — nunca a mesma mensagem 3x).
 4. Apresente as 3 via `AskUserQuestion` (cada mensagem é o `label` de uma opção; "Other" permite texto customizado).
-5. `git commit -m "<escolhida>"` — só o título, sem corpo.
+5. `git commit -m "<escolhida>"` — só o título. A única exceção é o commit que resolve uma issue: aí leva o corpo `Closes #N.` (`git commit -m "<escolhida>" -m "Closes #N."`).
 6. Se o usuário pediu "por partes", repita o ciclo agrupando arquivos por assunto.
 
 ## Formato
@@ -26,7 +26,8 @@ Execute **imediatamente** quando invocado — sem perguntar se pode começar.
 
 - **emoji**: código textual (`:sparkles:`, `:bug:`...); **tipo**: identificador (feat, fix, refactor...)
 - **descrição**: no **gerúndio** (`adicionando`, `corrigindo`), pt-br com acentuação correta, sem ponto final
-- **sem escopo** `(...)`, **sem corpo**, máximo **50 caracteres** no total
+- **sem escopo** `(...)`, máximo **50 caracteres** no título
+- **sem corpo**, exceto `Closes #N.` quando o commit resolve a issue #N. Tem de ser em inglês: `Fecha #N` não fecha nada. E em `develop` a issue só fecha quando o commit chega na `main`.
 
 ## Tipos
 
