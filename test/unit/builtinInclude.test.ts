@@ -32,8 +32,11 @@ afterAll(async () => {
     await Promise.all(temps.map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-/** Um app consumidor mínimo, com o `include` do `tsconfig.app.json` escolhido pelo caso. */
-const consumer = async (include: string[]) => {
+/**
+ * Um app consumidor mínimo, com o `include` do `tsconfig.app.json` escolhido pelo
+ * caso, e o arquivo do util que o template de tipos importa.
+ */
+const consumer = async (include: string[], util = "Error.d.vue.ts") => {
     const root = await mkdtemp(path.join(tmpdir(), "rform-builtin-"));
 
     temps.push(root);
@@ -48,8 +51,23 @@ const consumer = async (include: string[]) => {
     await write(`${REAL}/package.json`, JSON.stringify({ name: "nuxt-rform", type: "module" }));
     await write(
         `${REAL}/dist/runtime/type.d.ts`,
-        "export type Element<D> = { name?: string; label?: string; modelValue?: D };"
+        [
+            "export type Element<D> = { name?: string; label?: string; modelValue?: D };",
+            "export type IconsProp<T> = { icons?: { [K in keyof T]?: string } };"
+        ].join("\n")
     );
+    // O util como o pacote o publica: o `.vue` cru e a declaração que o vue-tsc emite.
+    const errorProps = [
+        `import type { IconsProp } from "#rform/types";`,
+        "export declare const defaults: { ui: { container: string }; icons: { alert: string } };",
+        "export type Props = { error?: string; ui?: { container?: string } } & IconsProp<typeof defaults.icons>;"
+    ];
+
+    await write(
+        `${REAL}/dist/runtime/components/utils/Error.vue`,
+        [`<script lang="ts">`, ...errorProps, "</script>"].join("\n")
+    );
+    await write(`${REAL}/dist/runtime/components/utils/Error.d.vue.ts`, errorProps.join("\n"));
     await write(
         `${REAL}/dist/runtime/components/fields/Select.d.vue.ts`,
         [
@@ -65,7 +83,23 @@ const consumer = async (include: string[]) => {
     // O que o Nuxt gera: `#rform/types` é do app, e só o tsconfig dele o conhece.
     await write(
         ".nuxt/rform/types/index.d.ts",
-        `export type { Element } from "../../../${REAL}/dist/runtime/type";`
+        `export type { Element, IconsProp } from "../../../${REAL}/dist/runtime/type";`
+    );
+    // Os dois templates de `types/components/utils`, com o import relativo do util.
+    await write(
+        ".nuxt/rform/types/components/utils/index.ts",
+        [
+            `export type Error = import("../../../../../${REAL}/dist/runtime/components/utils/${util}").Props`,
+            "export default interface All { Error: Error }"
+        ].join("\n")
+    );
+    await write(
+        ".nuxt/rform/types/components/utils/props.ts",
+        [
+            "type Utils = import('./').default",
+            `export type Error = Omit<Utils["Error"], "ui" | "icons"> & Readonly<Omit<Utils["Error"], "ui" | "icons">> & { ui?: { Utils?: { Error?: Utils["Error"]["ui"] } }; icons?: { Utils?: { Error?: Utils["Error"] extends { icons?: infer I } ? I : never } } }`,
+            "export default interface All { Error: Error }"
+        ].join("\n")
     );
     await write(".nuxt/nuxt.d.ts", "export {}");
     await write(
@@ -108,13 +142,25 @@ const FIELD = [
     "<template><div>{{ props.route }}</div></template>"
 ].join("\n");
 
-const compile = async (root: string) => {
+/** O campo da issue #15: um campo novo que herda as props do `RUtilsError`. */
+const UTIL_FIELD = [
+    `<script lang="ts">`,
+    `    import type Utils from "#rform/types/components/utils/props";`,
+    `    export type Props = Utils["Error"] & { route: string };`,
+    "</script>",
+    `<script setup lang="ts">`,
+    "    const props = defineProps<Props>();",
+    "</script>",
+    "<template><div>{{ props.route }}</div></template>"
+].join("\n");
+
+const compile = async (root: string, source = FIELD) => {
     const filename = path.join(root, "app", "rform", "fields", "SelectApi.vue");
 
     await mkdir(path.dirname(filename), { recursive: true });
-    await writeFile(filename, FIELD);
+    await writeFile(filename, source);
 
-    const { descriptor } = parse(FIELD, { filename });
+    const { descriptor } = parse(source, { filename });
 
     return compileScript(descriptor, { id: "select-api", fs: ts.sys }).content;
 };
@@ -147,6 +193,28 @@ describe("estender o Props de um embutido no app instalado", () => {
         await expect(compile(root)).rejects.toThrow(
             /Failed to resolve import source "#rform\/types"/
         );
+    });
+});
+
+describe("herdar as props de um util no app instalado", () => {
+    // O compiler-sfc lê o arquivo que o template de tipos nomeia, e o `#rform/types`
+    // de lá só resolve se ele casar o `include`. É por isso que o template aponta para
+    // o `.d.vue.ts`, e não para o `.vue` cru (issue #15).
+    it("com o template apontando para o .vue, o #rform/types do util não resolve", async () => {
+        const root = await consumer([`${REAL_COMPONENTS}/**/*.d.vue.ts`], "Error.vue");
+
+        await expect(compile(root, UTIL_FIELD)).rejects.toThrow(
+            /Failed to resolve import source "#rform\/types"/
+        );
+    });
+
+    it("com o template apontando para o .d.vue.ts, o campo enumera as props do util", async () => {
+        const root = await consumer([`${REAL_COMPONENTS}/**/*.d.vue.ts`]);
+        const content = await compile(root, UTIL_FIELD);
+
+        expect(content).toContain("error: { type: String, required: false }");
+        expect(content).toContain("icons: { type: Object, required: false }");
+        expect(content).toContain("route: { type: String, required: true }");
     });
 });
 

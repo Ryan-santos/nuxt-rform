@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectComponents, collectModules, RESERVED } from "../../src/scan";
+import { collectComponents, collectModules, RESERVED, typeSource } from "../../src/scan";
 
 const builtin = (...files: string[]) => ({
     root: "/module/components/fields",
@@ -113,5 +113,22 @@ describe("collectModules", () => {
 
     it("devolve lista vazia quando não há arquivo", () => {
         expect(collectModules([])).toEqual([]);
+    });
+});
+
+describe("typeSource", () => {
+    const on =
+        (...files: string[]) =>
+        (path: string) =>
+            files.includes(path);
+
+    it("lê o .d.vue.ts quando ele existe ao lado, como no dist", () => {
+        expect(typeSource("/dist/utils/Error.vue", on("/dist/utils/Error.d.vue.ts"))).toBe(
+            "/dist/utils/Error.d.vue.ts"
+        );
+    });
+
+    it("cai no .vue quando não há declaração, como no repo e no app", () => {
+        expect(typeSource("/src/utils/Error.vue", on())).toBe("/src/utils/Error.vue");
     });
 });

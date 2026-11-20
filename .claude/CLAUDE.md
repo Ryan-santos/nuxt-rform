@@ -71,7 +71,7 @@ Esse alias é registrado **antes** de `#rform`: o Vite casa aliases na ordem de 
 
 `collectComponents` é puro e recebe as raízes já lidas, na ordem embutido→usuário — quem vem depois vence, igual ao `collectPresets`. Desse escaneamento único saem `types/components/*`, `types/fields.d.ts`, `types/schema.d.ts`, `components-map.ts`, `registry.ts` e as raízes do vite plugin. Nome de arquivo precisa ser PascalCase alfanumérico, porque vira chave de objeto **e** membro do `FieldType`.
 
-Os `import()` de `.vue` nos templates de tipo saem **relativos**. O `@vue/compiler-sfc` resolve import relativo com `fs` puro, e manda qualquer outra coisa para a resolução de módulos do TypeScript, que sozinha não resolve um specifier `.vue`.
+Os `import()` de `.vue` nos templates de tipo saem **relativos**. O `@vue/compiler-sfc` resolve import relativo com `fs` puro, e manda qualquer outra coisa para a resolução de módulos do TypeScript, que sozinha não resolve um specifier `.vue`. No `dist` eles apontam para o `.d.vue.ts` ao lado, e não para o `.vue` (`typeSource`, em `src/scan.ts`) — ver "O consumidor precisa incluir os `.d.vue.ts` do pacote".
 
 ### useField (`src/runtime/composables/useField.ts`)
 
@@ -1615,6 +1615,28 @@ Três decisões nessa linha, e as três foram medidas:
   `inferRuntimeType` falha macio por prop, e só a resolução do `Props` inteiro é que
   falha alto. Incluir `runtime/**/*.d.ts` fecharia isso; não se fez.
 
+**Os templates de tipo apontam para o mesmo `.d.vue.ts`, e é a segunda metade da
+regra.** O `include` só vale para o arquivo que o compiler-sfc de fato lê, e ele lê o
+que o import nomeia: o `resolveExt` tenta o nome exato antes de qualquer `.d.ts`.
+Os templates `types/components/*` importavam o **`.vue` cru**, então um campo com
+`Utils["Error"]` no `Props` fazia o compiler-sfc ler o `<script>` do `Error.vue`
+publicado e resolver o `#rform/types` **de lá** — fora do `include`, morria igual ao
+#5. Era a issue #15. Hoje o `typeSource` (`src/scan.ts`) troca o `.vue` pelo
+`.d.vue.ts` quando ele existe ao lado, o que só acontece no `dist`; no repo e num
+campo do usuário não há declaração, e o import continua no `.vue`. O TS aceita o
+`import("…/Error.d.vue.ts")` por extenso, e o `typeof import` do `Checked` também.
+
+**Incluir o `.vue` no `include` também resolveria, e não se fez.** Medido: o
+`exclude: ["../node_modules"]` do Nuxt o manteria fora do programa do TS, então
+custaria nada ao `vue-tsc`. Mas aí o compiler-sfc leria o fonte do pacote em vez da
+declaração que ele publica, e duas entradas de `include` diriam a mesma coisa.
+
+Passou a morder na 0.4.0 porque o `Props` do `Error`, do `Loading` e do `FileItem`
+ganhou `& IconsProp<…>`: antes, toda referência a `#rform/types` neles estava no
+tipo de uma prop (falha macia); a interseção pôs uma no **conjunto de chaves**, que
+é a resolução que falha alto. O `Utils["Calendar"]` já quebrava assim desde o
+`& TextProp<…>`.
+
 Uma linha de `include` **não** cobre o pacote linkado (`pnpm link`, `file:` para um
 diretório): o `findConfigFile` sobe a partir do arquivo **real**, que mora fora da
 árvore do app, e nunca chega ao tsconfig dele. É o cenário do clone que a issue
@@ -1628,6 +1650,15 @@ casa) e o `tsconfig.app.json` gerado da fixture carregando a entrada. Como a do
 `npm pack`, `pnpm install` e `nuxi build` num app fora do repo, onde o `before.tgz`
 morre na linha 113 do `Select.d.vue.ts` e o `after.tgz` monta com as 23 props
 enumeradas e o `vue-tsc` limpo.
+
+O #15 tem o mesmo par de guardas: o `describe("herdar as props de um util…")` do
+mesmo arquivo (o template no `.vue` morre em `#rform/types`; no `.d.vue.ts` o campo
+enumera `error`, `icons` e `route`) e o `typeSource` em `test/unit/scan.test.ts`. O
+tarball também foi conferido: com um `app/rform/fields/KeyValue.vue` de
+`Utils["Label"] & Utils["Description"] & Utils["Error"]`, o pacote de antes morre
+no `nuxi build` apontando para o `utils/Error.vue`, e o de depois monta, com o
+`vue-tsc` limpo e o campo compilado declarando `error`, `label`, `icons`,
+`description` e `route`.
 
 #### Os specifiers saem sem extensão
 

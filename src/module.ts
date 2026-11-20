@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
@@ -17,7 +18,7 @@ import { name as pkg, version } from "../package.json";
 import { resolveAppMessages, trTemplate, type I18nConfig } from "./appMessages";
 import { langFile } from "./langFile";
 import { collectPresets } from "./presets";
-import { collectComponents, collectModules, type ComponentFile } from "./scan";
+import { collectComponents, collectModules, typeSource, type ComponentFile } from "./scan";
 import vitePlugin from "./vite.plugin";
 
 // Ligado, não desestruturado: o kit tipa `resolve` como método, e arrancá-lo do
@@ -190,8 +191,11 @@ export default defineNuxtModule<ModuleOptions>({
             return JSON.stringify(path.startsWith(".") ? path : `./${path}`);
         };
 
+        // No `dist`, o `.d.vue.ts`: é o que casa o `include` do consumidor (issue #15).
+        const typeFile = (component: ComponentFile) => typeSource(filePath(component), existsSync);
+
         const importer = (template: string) => (component: ComponentFile) =>
-            `import(${relativeSpecifier(template, filePath(component))}).Props`;
+            `import(${relativeSpecifier(template, typeFile(component))}).Props`;
 
         /**
          * O que o vite plugin escreve na chamada não passa pelo `vue-tsc`: ele lê o SFC
@@ -220,7 +224,7 @@ export default defineNuxtModule<ModuleOptions>({
             list
                 .map(
                     (component) =>
-                        `    Assert<Injected<typeof import(${relativeSpecifier(template, filePath(component))})>>`
+                        `    Assert<Injected<typeof import(${relativeSpecifier(template, typeFile(component))})>>`
                 )
                 .join(",\n"),
             "]"

@@ -98,3 +98,17 @@ export const collectModules = (files: string[]): ModuleFile[] => {
 
     return [...merged.values()];
 };
+
+/**
+ * O arquivo de onde os templates de tipo leem o `Props` de um componente: o
+ * `.d.vue.ts` quando existe ao lado (o `dist` publicado), senão o próprio `.vue`.
+ * O compiler-sfc lê o que o import nomeia, e só o `.d.vue.ts` casa o `include` do
+ * consumidor. Ver "O consumidor precisa incluir os `.d.vue.ts`" no CLAUDE.md.
+ *
+ * @example typeSource("/dist/fields/Text.vue", existsSync) // → "/dist/fields/Text.d.vue.ts"
+ */
+export const typeSource = (file: string, exists: (path: string) => boolean) => {
+    const declaration = file.replace(/\.vue$/, ".d.vue.ts");
+
+    return declaration !== file && exists(declaration) ? declaration : file;
+};
